@@ -2,6 +2,7 @@ plugins {
     java
     id("org.springframework.boot") version "3.3.4"
     id("io.spring.dependency-management") version "1.1.7"
+    id("com.diffplug.spotless") version "6.25.0"
 }
 
 group = "backend"
@@ -10,6 +11,29 @@ version = "0.0.1-SNAPSHOT"
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+spotless {
+    java {
+        target("src/**/*.java")
+
+        palantirJavaFormat()   // 4칸 들여쓰기 기반의 깔끔한 포맷팅
+        removeUnusedImports()  // 사용하지 않는 import 자동 제거
+        trimTrailingWhitespace() // 줄 끝 불필요한 공백 제거
+        formatAnnotations()    // 어노테이션 배치 최적화
+        endWithNewline()       // 파일 끝 개행 추가 (POSIX 표준)
+
+        // Import 순서 정렬: 팀원 간의 Git 충돌 방지 핵심 설정
+        importOrder(
+            "java",
+            "javax",
+            "jakarta",
+            "org",
+            "com",
+            "backend.drawrace",
+            ""
+        )
     }
 }
 

@@ -1,14 +1,15 @@
 package backend.drawrace.domain.room.entity;
 
-import backend.drawrace.domain.user.entity.User;
-import backend.drawrace.global.entity.BaseEntity;
+import java.util.ArrayList;
+import java.util.List;
+
 import jakarta.persistence.*;
+
+import backend.drawrace.global.entity.BaseEntity;
+
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Getter
