@@ -6,7 +6,6 @@ import jakarta.persistence.*;
 
 import backend.drawrace.domain.room.entity.Room;
 import backend.drawrace.global.entity.BaseEntity;
-
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -31,10 +30,38 @@ public class Round extends BaseEntity {
     @Column(nullable = false)
     private String keyword;
 
-    private boolean isActive = true;
+    @Column(nullable = false)
+    private boolean isActive;
 
     @Enumerated(EnumType.STRING)
-    private RoundStatus status; // READY, IN_PROGRESS, FINISHED
+    @Column(nullable = false)
+    private RoundStatus status;
 
     private LocalDateTime startedAt;
+
+    private LocalDateTime endedAt;
+
+    private Round(Room room, int roundNumber, String keyword) {
+        this.room = room;
+        this.roundNumber = roundNumber;
+        this.keyword = keyword;
+        this.status = RoundStatus.READY;
+        this.isActive = false;
+    }
+
+    public static Round create(Room room, int roundNumber, String keyword) {
+        return new Round(room, roundNumber, keyword);
+    }
+
+    public void start() {
+        this.status = RoundStatus.IN_PROGRESS;
+        this.isActive = true;
+        this.startedAt = LocalDateTime.now();
+    }
+
+    public void finish() {
+        this.status = RoundStatus.FINISHED;
+        this.isActive = false;
+        this.endedAt = LocalDateTime.now();
+    }
 }
