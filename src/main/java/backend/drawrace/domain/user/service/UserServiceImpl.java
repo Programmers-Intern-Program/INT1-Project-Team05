@@ -1,6 +1,7 @@
 package backend.drawrace.domain.user.service;
 
 import backend.drawrace.domain.user.dto.CreateUserRequest;
+import backend.drawrace.domain.user.dto.UserInfoResponse;
 import backend.drawrace.domain.user.entity.User;
 import backend.drawrace.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ public class UserServiceImpl implements  UserService {
 
     private final UserRepository userRepository;
 
+    @Override
     public Long signup(CreateUserRequest dto) {
 
         validateDuplicateUser(dto.getEmail(), dto.getNickname());
@@ -34,5 +36,13 @@ public class UserServiceImpl implements  UserService {
         if (userRepository.existsByNickname(nickname)) {
             throw new IllegalStateException("이미 존재하는 닉네임입니다.");
         }
+    }
+
+    @Override
+    public UserInfoResponse getUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다. ID: " + userId));
+
+        return UserInfoResponse.from(user);
     }
 }
