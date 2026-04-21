@@ -2,6 +2,7 @@ package backend.drawrace.domain.user.controller;
 
 import backend.drawrace.domain.user.dto.CreateUserRequest;
 import backend.drawrace.domain.user.dto.LoginRequest;
+import backend.drawrace.domain.user.service.AuthService;
 import backend.drawrace.domain.user.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,20 +19,18 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    private final UserService userService;
+    private final AuthService authService;
 
     @PostMapping("/signup")
     public ResponseEntity<Long> signup(@RequestBody @Valid CreateUserRequest request) {
-        Long userId = userService.signup(request);
+        Long userId = authService.signup(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(userId);
     }
 
     @PostMapping("/login")
     public ResponseEntity<String> login(@RequestBody @Valid LoginRequest dto) {
-        String token = userService.login(dto);
+        String token = authService.login(dto);
 
-        // 토큰을 바디에 담아주거나, 헤더에 담아줄 수 있습니다.
-        // 우선 테스트를 위해 바디에 담아 보낼게요.
         return ResponseEntity.ok(token);
     }
 }
