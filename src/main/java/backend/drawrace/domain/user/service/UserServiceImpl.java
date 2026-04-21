@@ -1,5 +1,9 @@
 package backend.drawrace.domain.user.service;
 
+import backend.drawrace.domain.user.dto.LoginRequest;
+import backend.drawrace.global.exception.ServiceException;
+import backend.drawrace.global.security.JwtTokenProvider;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,29 +20,6 @@ import lombok.RequiredArgsConstructor;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
-
-    @Override
-    public Long signup(CreateUserRequest dto) {
-
-        validateDuplicateUser(dto.getEmail(), dto.getNickname());
-
-        User user = User.builder()
-                .email(dto.getEmail())
-                .password(dto.getPassword())
-                .nickname(dto.getNickname())
-                .build();
-
-        return userRepository.save(user).getId();
-    }
-
-    private void validateDuplicateUser(String email, String nickname) {
-        if (userRepository.existsByEmail(email)) {
-            throw new IllegalStateException("이미 존재하는 이메일입니다.");
-        }
-        if (userRepository.existsByNickname(nickname)) {
-            throw new IllegalStateException("이미 존재하는 닉네임입니다.");
-        }
-    }
 
     @Override
     public UserInfoResponse getUser(Long userId) {
