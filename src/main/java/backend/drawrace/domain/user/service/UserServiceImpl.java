@@ -1,17 +1,19 @@
 package backend.drawrace.domain.user.service;
 
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import backend.drawrace.domain.user.dto.CreateUserRequest;
 import backend.drawrace.domain.user.dto.UserInfoResponse;
 import backend.drawrace.domain.user.entity.User;
 import backend.drawrace.domain.user.repository.UserRepository;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class UserServiceImpl implements  UserService {
+public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
 
@@ -40,7 +42,8 @@ public class UserServiceImpl implements  UserService {
 
     @Override
     public UserInfoResponse getUser(Long userId) {
-        User user = userRepository.findById(userId)
+        User user = userRepository
+                .findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다. ID: " + userId));
 
         return UserInfoResponse.from(user);

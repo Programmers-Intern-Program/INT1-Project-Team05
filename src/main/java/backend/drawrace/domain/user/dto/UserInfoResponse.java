@@ -1,6 +1,7 @@
 package backend.drawrace.domain.user.dto;
 
 import backend.drawrace.domain.user.entity.User;
+
 import lombok.Builder;
 import lombok.Getter;
 

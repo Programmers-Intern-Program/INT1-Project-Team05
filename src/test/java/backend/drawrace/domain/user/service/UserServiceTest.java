@@ -1,23 +1,27 @@
 package backend.drawrace.domain.user.service;
 
-import backend.drawrace.domain.user.dto.CreateUserRequest;
-import backend.drawrace.domain.user.dto.UserInfoResponse;
-import backend.drawrace.domain.user.repository.UserRepository;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import backend.drawrace.domain.user.dto.CreateUserRequest;
+import backend.drawrace.domain.user.dto.UserInfoResponse;
+import backend.drawrace.domain.user.repository.UserRepository;
 
 @SpringBootTest
 @Transactional // 테스트 후 롤백되어 DB에 영향을 주지 않음
 class UserServiceTest {
 
-    @Autowired UserService userService;
-    @Autowired UserRepository userRepository;
+    @Autowired
+    UserService userService;
+
+    @Autowired
+    UserRepository userRepository;
 
     @Test
     @DisplayName("회원가입_성공")
@@ -55,8 +59,7 @@ class UserServiceTest {
                 .build();
 
         // when & then
-        assertThatThrownBy(() -> userService.signup(request2))
-                .isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> userService.signup(request2)).isInstanceOf(IllegalStateException.class);
     }
 
     @Test

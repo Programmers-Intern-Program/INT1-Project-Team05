@@ -1,15 +1,9 @@
 package backend.drawrace.domain.user.entity;
 
-import backend.drawrace.domain.user.entity.UserStats;
+import jakarta.persistence.*;
+
 import backend.drawrace.global.entity.BaseEntity;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToOne;
+
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,6 +11,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
+@Table(name = "users")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User extends BaseEntity {
 
@@ -45,8 +40,6 @@ public class User extends BaseEntity {
         this.password = password;
         this.nickname = nickname;
         this.profileImageUrl = profileImageUrl;
-        this.stats = UserStats.builder()
-                .user(this)
-                .build();
+        this.stats = UserStats.builder().user(this).build();
     }
 }

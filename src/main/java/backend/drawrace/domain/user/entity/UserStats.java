@@ -1,12 +1,13 @@
 package backend.drawrace.domain.user.entity;
 
-import backend.drawrace.global.entity.BaseEntity;
 import jakarta.persistence.*;
+
+import backend.drawrace.global.entity.BaseEntity;
+
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
 
 @Entity
 @Getter
