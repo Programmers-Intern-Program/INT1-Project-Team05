@@ -1,5 +1,7 @@
 package backend.drawrace.domain.user.entity;
 
+import backend.drawrace.domain.user.entity.UserStats;
+import backend.drawrace.global.entity.BaseEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -8,10 +10,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToOne;
-
-import backend.drawrace.global.entity.BaseEntity;
-
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -38,4 +38,15 @@ public class User extends BaseEntity {
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private UserStats stats;
+
+    @Builder
+    public User(String email, String password, String nickname, String profileImageUrl) {
+        this.email = email;
+        this.password = password;
+        this.nickname = nickname;
+        this.profileImageUrl = profileImageUrl;
+        this.stats = UserStats.builder()
+                .user(this)
+                .build();
+    }
 }
