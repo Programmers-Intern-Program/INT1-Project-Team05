@@ -1,4 +1,3 @@
 package backend.drawrace.global.security;
 
-public class SecurityConfig {
-}
+public class SecurityConfig {}

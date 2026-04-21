@@ -1,8 +1,10 @@
 package backend.drawrace.domain.room.entity;
 
+import jakarta.persistence.*;
+
 import backend.drawrace.domain.user.entity.User;
 import backend.drawrace.global.entity.BaseEntity;
-import jakarta.persistence.*;
+
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

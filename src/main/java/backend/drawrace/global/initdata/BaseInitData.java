@@ -1,4 +1,3 @@
 package backend.drawrace.global.initdata;
 
-public class BaseInitData {
-}
+public class BaseInitData {}

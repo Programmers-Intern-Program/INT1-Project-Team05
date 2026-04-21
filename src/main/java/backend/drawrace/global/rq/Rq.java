@@ -1,4 +1,3 @@
 package backend.drawrace.global.rq;
 
-public class Rq {
-}
+public class Rq {}

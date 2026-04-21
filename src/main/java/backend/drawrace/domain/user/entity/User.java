@@ -1,7 +1,5 @@
 package backend.drawrace.domain.user.entity;
 
-import backend.drawrace.domain.user.entity.UserStats;
-import backend.drawrace.global.entity.BaseEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,6 +8,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToOne;
+
+import backend.drawrace.global.entity.BaseEntity;
+
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
