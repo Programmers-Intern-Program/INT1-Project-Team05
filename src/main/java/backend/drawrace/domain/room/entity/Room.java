@@ -24,7 +24,7 @@ public class Room extends BaseEntity {
     @Column(nullable = false)
     private String title;
 
-//    private String password;
+    //    private String password;
 
     @Column(name = "host_id", nullable = false)
     private Long hostId;
