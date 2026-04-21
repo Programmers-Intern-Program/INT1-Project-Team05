@@ -3,6 +3,7 @@ package backend.drawrace.domain.round.service;
 import backend.drawrace.domain.room.entity.Room;
 import backend.drawrace.domain.room.repository.ParticipantRepository;
 import backend.drawrace.domain.room.repository.RoomRepository;
+import backend.drawrace.domain.round.dto.RoundStartResponse;
 import backend.drawrace.domain.round.entity.Round;
 import backend.drawrace.domain.round.repository.RoundRepository;
 import backend.drawrace.domain.round.validator.RoundValidator;
@@ -23,7 +24,7 @@ public class RoundService {
     private final RoundValidator roundValidator;
 
     @Transactional
-    public Round startGame(Long roomId) {
+    public RoundStartResponse startGame(Long roomId) {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 방입니다. roomId=" + roomId));
 
@@ -42,6 +43,7 @@ public class RoundService {
 
         room.startGame();
 
-        return roundRepository.save(firstRound);
+        Round savedRound = roundRepository.save(firstRound);
+        return RoundStartResponse.from(savedRound);
     }
 }
