@@ -17,7 +17,7 @@ public interface AuthService {
     /**
      * 로그인
      * @param dto 로그인 정보 (email, password)
-     * @return 생성된 유저의 토큰
+     * @return Access Token과 Refresh Token
      */
     LoginResponse login(LoginRequest dto);
 
