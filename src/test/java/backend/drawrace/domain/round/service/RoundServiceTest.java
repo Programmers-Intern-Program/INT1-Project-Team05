@@ -197,7 +197,8 @@ class RoundServiceTest {
 
         given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
         given(participantRepository.findByIdAndRoomId(participantId, roomId)).willReturn(Optional.of(participant));
-        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId)).willReturn(true);
+        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(true);
         given(aiInferenceService.infer("dummy-image")).willReturn("사과");
         given(keywordProvider.getRandomKeyword()).willReturn("자동차");
         given(participantRepository.findByRoomId(roomId)).willReturn(List.of(participant, participant2));
@@ -243,7 +244,8 @@ class RoundServiceTest {
 
         given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
         given(participantRepository.findByIdAndRoomId(participantId, roomId)).willReturn(Optional.of(participant));
-        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId)).willReturn(true);
+        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(true);
         given(aiInferenceService.infer("dummy-image")).willReturn("사과");
         given(participantRepository.findByRoomId(roomId)).willReturn(List.of(participant, participant2));
 
@@ -277,7 +279,8 @@ class RoundServiceTest {
 
         given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
         given(participantRepository.findByIdAndRoomId(participantId, roomId)).willReturn(Optional.of(participant));
-        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId)).willReturn(true);
+        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(true);
         given(aiInferenceService.infer("dummy-image")).willReturn("사과");
         given(participantRepository.findByRoomId(roomId)).willReturn(List.of(participant, participant2));
         given(keywordProvider.getRandomKeyword()).willReturn("자동차");
@@ -318,7 +321,8 @@ class RoundServiceTest {
 
         given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
         given(participantRepository.findByIdAndRoomId(participantId, roomId)).willReturn(Optional.of(participant));
-        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId)).willReturn(true);
+        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(true);
         given(aiInferenceService.infer("dummy-image")).willReturn("사과");
 
         // when

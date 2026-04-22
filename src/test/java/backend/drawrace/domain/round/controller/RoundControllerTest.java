@@ -1,5 +1,7 @@
 package backend.drawrace.domain.round.controller;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -13,11 +15,11 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import backend.drawrace.domain.round.dto.SubmitDrawingRequest;
 import backend.drawrace.domain.round.dto.SubmitDrawingResponse;
 import backend.drawrace.domain.round.service.RoundService;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @WebMvcTest(RoundController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -49,7 +51,7 @@ class RoundControllerTest {
                 .roundWinCount(1)
                 .build();
 
-        given(roundService.submitDrawing(roundId, org.mockito.ArgumentMatchers.any(SubmitDrawingRequest.class)))
+        given(roundService.submitDrawing(eq(roundId), any(SubmitDrawingRequest.class)))
                 .willReturn(response);
 
         mockMvc.perform(post("/api/rounds/{roundId}/submit", roundId)
