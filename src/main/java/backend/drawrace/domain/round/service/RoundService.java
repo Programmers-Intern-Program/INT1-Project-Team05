@@ -1,5 +1,16 @@
 package backend.drawrace.domain.round.service;
 
+import java.util.List;
+
+import jakarta.persistence.EntityNotFoundException;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import backend.drawrace.domain.room.entity.Participant;
+import backend.drawrace.domain.room.entity.Room;
+import backend.drawrace.domain.room.repository.ParticipantRepository;
+import backend.drawrace.domain.room.repository.RoomRepository;
 import backend.drawrace.domain.round.dto.AiInferenceResponse;
 import backend.drawrace.domain.round.dto.CurrentRoundResponse;
 import backend.drawrace.domain.round.dto.RoundParticipantResponse;
@@ -13,14 +24,7 @@ import backend.drawrace.domain.round.repository.RoundParticipantRepository;
 import backend.drawrace.domain.round.repository.RoundRepository;
 import backend.drawrace.domain.round.repository.RoundSubmissionRepository;
 import backend.drawrace.domain.round.validator.RoundValidator;
-import backend.drawrace.domain.room.entity.Participant;
-import backend.drawrace.domain.room.entity.Room;
-import backend.drawrace.domain.room.repository.ParticipantRepository;
-import backend.drawrace.domain.room.repository.RoomRepository;
-import jakarta.persistence.EntityNotFoundException;
-import java.util.List;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -45,16 +49,13 @@ public class RoundService {
      */
     @Transactional
     public RoundStartResponse startGame(Long roomId) {
-        Room room = roomRepository.findById(roomId)
+        Room room = roomRepository
+                .findById(roomId)
                 .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 방입니다. roomId=" + roomId));
 
         long participantCount = participantRepository.countByRoomId(roomId);
 
-        roundValidator.validateStartGame(
-                room,
-                participantCount,
-                roundRepository.findByRoomIdAndIsActiveTrue(roomId)
-        );
+        roundValidator.validateStartGame(room, participantCount, roundRepository.findByRoomIdAndIsActiveTrue(roomId));
 
         String keyword = keywordProvider.getRandomKeyword();
 
@@ -80,7 +81,8 @@ public class RoundService {
     @Transactional
     public SubmitDrawingResponse submitDrawing(Long roundId, SubmitDrawingRequest request) {
         // 1. 현재 라운드 조회 및 진행 상태 검증
-        Round round = roundRepository.findById(roundId)
+        Round round = roundRepository
+                .findById(roundId)
                 .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 라운드입니다. roundId=" + roundId));
 
         roundValidator.validateRoundInProgress(round);
@@ -89,7 +91,8 @@ public class RoundService {
         Participant participant = getValidParticipant(round, request.getParticipantId());
 
         // 3. 이번 라운드 제출 대상인지 검증
-        boolean canPlay = roundParticipantRepository.existsByRoundIdAndParticipantId(round.getId(), participant.getId());
+        boolean canPlay =
+                roundParticipantRepository.existsByRoundIdAndParticipantId(round.getId(), participant.getId());
         roundValidator.validateRoundParticipant(canPlay, participant.getId());
 
         // 4. 이미 제출했는지 검증
@@ -104,12 +107,7 @@ public class RoundService {
 
         // 6. 제출 기록 저장
         RoundSubmission submission = RoundSubmission.create(
-                round,
-                participant,
-                request.getImageData(),
-                aiResult.getAiAnswer(),
-                aiResult.getScore()
-        );
+                round, participant, request.getImageData(), aiResult.getAiAnswer(), aiResult.getScore());
         roundSubmissionRepository.save(submission);
 
         // 7. 현재 제출 수 확인
@@ -141,13 +139,14 @@ public class RoundService {
      */
     @Transactional(readOnly = true)
     public CurrentRoundResponse getCurrentRound(Long roomId) {
-        Round currentRound = roundRepository.findByRoomIdAndIsActiveTrue(roomId)
+        Round currentRound = roundRepository
+                .findByRoomIdAndIsActiveTrue(roomId)
                 .orElseThrow(() -> new EntityNotFoundException("현재 진행 중인 라운드가 없습니다. roomId=" + roomId));
 
-        List<RoundParticipantResponse> participants = roundParticipantRepository.findByRoundId(currentRound.getId())
-                .stream()
-                .map(roundParticipant -> RoundParticipantResponse.from(roundParticipant.getParticipant()))
-                .toList();
+        List<RoundParticipantResponse> participants =
+                roundParticipantRepository.findByRoundId(currentRound.getId()).stream()
+                        .map(roundParticipant -> RoundParticipantResponse.from(roundParticipant.getParticipant()))
+                        .toList();
 
         return CurrentRoundResponse.of(currentRound, participants);
     }
@@ -157,20 +156,17 @@ public class RoundService {
      * - 방 소속이 아니면 예외 발생
      */
     private Participant getValidParticipant(Round round, Long participantId) {
-        return participantRepository.findByIdAndRoomId(participantId, round.getRoom().getId())
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "해당 라운드의 방에 속한 참가자가 아닙니다. participantId=" + participantId));
+        return participantRepository
+                .findByIdAndRoomId(participantId, round.getRoom().getId())
+                .orElseThrow(
+                        () -> new EntityNotFoundException("해당 라운드의 방에 속한 참가자가 아닙니다. participantId=" + participantId));
     }
 
     /**
      * 전원 제출 완료 시 이번 라운드의 승자를 선정하고 라운드를 종료한다.
      */
     private SubmitDrawingResponse handleRoundCompletion(
-            Round round,
-            AiInferenceResponse aiResult,
-            long submittedCount,
-            long totalParticipantCount
-    ) {
+            Round round, AiInferenceResponse aiResult, long submittedCount, long totalParticipantCount) {
         List<RoundSubmission> submissions = roundSubmissionRepository.findByRoundId(round.getId());
 
         RoundSubmission winnerSubmission = submissions.stream()
@@ -194,8 +190,7 @@ public class RoundService {
             AiInferenceResponse aiResult,
             long submittedCount,
             long totalParticipantCount,
-            Participant roundWinner
-    ) {
+            Participant roundWinner) {
         Room room = round.getRoom();
 
         // 결승 라운드면 바로 최종 우승
@@ -254,8 +249,7 @@ public class RoundService {
             AiInferenceResponse aiResult,
             long submittedCount,
             long totalParticipantCount,
-            Participant roundWinner
-    ) {
+            Participant roundWinner) {
         Room room = round.getRoom();
         List<Participant> topScorers = findTopScorers(room.getId());
 

@@ -49,8 +49,7 @@ class RoundGameControllerTest {
 
         given(roundService.startGame(roomId)).willReturn(response);
 
-        mockMvc.perform(post("/api/rooms/{roomId}/start", roomId)
-                        .contentType(MediaType.APPLICATION_JSON))
+        mockMvc.perform(post("/api/rooms/{roomId}/start", roomId).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.roomId").value(1))
                 .andExpect(jsonPath("$.roundId").value(10))
@@ -85,14 +84,12 @@ class RoundGameControllerTest {
                                 .roundWinCount(0)
                                 .isHost(false)
                                 .isWinner(false)
-                                .build()
-                ))
+                                .build()))
                 .build();
 
         given(roundService.getCurrentRound(roomId)).willReturn(response);
 
-        mockMvc.perform(get("/api/rooms/{roomId}/rounds/current", roomId)
-                        .contentType(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/api/rooms/{roomId}/rounds/current", roomId).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.roomId").value(1))
                 .andExpect(jsonPath("$.roundId").value(10))

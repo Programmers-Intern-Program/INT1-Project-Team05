@@ -89,7 +89,8 @@ class RoundServiceTest {
         RoundStartResponse response = roundService.startGame(roomId);
 
         then(roundValidator).should().validateStartGame(eq(room), eq(2L), eq(Optional.empty()));
-        then(roundParticipantRepository).should()
+        then(roundParticipantRepository)
+                .should()
                 .saveAll(argThat((Iterable<RoundParticipant> iterable) -> countIterable(iterable) == 2));
 
         assertThat(response.getRoomId()).isEqualTo(roomId);
@@ -126,16 +127,16 @@ class RoundServiceTest {
 
         given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
         given(participantRepository.findByIdAndRoomId(participantId, roomId)).willReturn(Optional.of(participant));
-        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId)).willReturn(true);
-        given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, participantId)).willReturn(false);
-        given(aiInferenceService.infer("dummy-image", "사과"))
-                .willReturn(new AiInferenceResponse("사과", 0.88));
+        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(true);
+        given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(false);
+        given(aiInferenceService.infer("dummy-image", "사과")).willReturn(new AiInferenceResponse("사과", 0.88));
         given(roundSubmissionRepository.countByRoundId(roundId)).willReturn(1L);
         given(roundParticipantRepository.findByRoundId(roundId))
                 .willReturn(List.of(
                         createRoundParticipant(1L, round, participant),
-                        createRoundParticipant(2L, round, createParticipant(101L, room, 0))
-                ));
+                        createRoundParticipant(2L, round, createParticipant(101L, room, 0))));
 
         SubmitDrawingResponse response = roundService.submitDrawing(roundId, request);
 
@@ -170,25 +171,22 @@ class RoundServiceTest {
 
         SubmitDrawingRequest request = createSubmitDrawingRequest(participantId, "dummy-image");
 
-        RoundSubmission currentSubmission =
-                RoundSubmission.create(round, participant, "dummy-image", "사과", 0.95);
-        RoundSubmission otherSubmission =
-                RoundSubmission.create(round, participant2, "other-image", "사과", 0.70);
+        RoundSubmission currentSubmission = RoundSubmission.create(round, participant, "dummy-image", "사과", 0.95);
+        RoundSubmission otherSubmission = RoundSubmission.create(round, participant2, "other-image", "사과", 0.70);
 
         given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
         given(participantRepository.findByIdAndRoomId(participantId, roomId)).willReturn(Optional.of(participant));
-        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId)).willReturn(true);
-        given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, participantId)).willReturn(false);
-        given(aiInferenceService.infer("dummy-image", "사과"))
-                .willReturn(new AiInferenceResponse("사과", 0.95));
+        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(true);
+        given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(false);
+        given(aiInferenceService.infer("dummy-image", "사과")).willReturn(new AiInferenceResponse("사과", 0.95));
         given(roundSubmissionRepository.countByRoundId(roundId)).willReturn(2L);
         given(roundParticipantRepository.findByRoundId(roundId))
                 .willReturn(List.of(
                         createRoundParticipant(1L, round, participant),
-                        createRoundParticipant(2L, round, participant2)
-                ));
-        given(roundSubmissionRepository.findByRoundId(roundId))
-                .willReturn(List.of(currentSubmission, otherSubmission));
+                        createRoundParticipant(2L, round, participant2)));
+        given(roundSubmissionRepository.findByRoundId(roundId)).willReturn(List.of(currentSubmission, otherSubmission));
 
         // 다음 일반 라운드 생성 시 save 호출
         given(roundRepository.save(any(Round.class))).willAnswer(invocation -> {
@@ -214,7 +212,8 @@ class RoundServiceTest {
         assertThat(round.getStatus()).isEqualTo(RoundStatus.FINISHED);
         assertThat(round.isActive()).isFalse();
 
-        then(roundParticipantRepository).should()
+        then(roundParticipantRepository)
+                .should()
                 .saveAll(argThat((Iterable<RoundParticipant> iterable) -> countIterable(iterable) == 2));
     }
 
@@ -229,30 +228,27 @@ class RoundServiceTest {
         setField(room, "totalRounds", (short) 3);
 
         Round round = createInProgressRound(roundId, room, 3, "사과");
-        Participant participant = createParticipant(participantId, room, 1);   // 이번 라운드 이기면 2점
+        Participant participant = createParticipant(participantId, room, 1); // 이번 라운드 이기면 2점
         Participant participant2 = createParticipant(101L, room, 1);
 
         SubmitDrawingRequest request = createSubmitDrawingRequest(participantId, "dummy-image");
 
-        RoundSubmission currentSubmission =
-                RoundSubmission.create(round, participant, "dummy-image", "사과", 0.92);
-        RoundSubmission otherSubmission =
-                RoundSubmission.create(round, participant2, "other-image", "사과", 0.81);
+        RoundSubmission currentSubmission = RoundSubmission.create(round, participant, "dummy-image", "사과", 0.92);
+        RoundSubmission otherSubmission = RoundSubmission.create(round, participant2, "other-image", "사과", 0.81);
 
         given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
         given(participantRepository.findByIdAndRoomId(participantId, roomId)).willReturn(Optional.of(participant));
-        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId)).willReturn(true);
-        given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, participantId)).willReturn(false);
-        given(aiInferenceService.infer("dummy-image", "사과"))
-                .willReturn(new AiInferenceResponse("사과", 0.92));
+        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(true);
+        given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(false);
+        given(aiInferenceService.infer("dummy-image", "사과")).willReturn(new AiInferenceResponse("사과", 0.92));
         given(roundSubmissionRepository.countByRoundId(roundId)).willReturn(2L);
         given(roundParticipantRepository.findByRoundId(roundId))
                 .willReturn(List.of(
                         createRoundParticipant(1L, round, participant),
-                        createRoundParticipant(2L, round, participant2)
-                ));
-        given(roundSubmissionRepository.findByRoundId(roundId))
-                .willReturn(List.of(currentSubmission, otherSubmission));
+                        createRoundParticipant(2L, round, participant2)));
+        given(roundSubmissionRepository.findByRoundId(roundId)).willReturn(List.of(currentSubmission, otherSubmission));
 
         // 마지막 라운드 후 findTopScorers에서 사용
         given(participantRepository.findByRoomId(roomId)).willReturn(List.of(participant, participant2));
@@ -282,29 +278,26 @@ class RoundServiceTest {
 
         Round round = createInProgressRound(roundId, room, 3, "사과");
         Participant participant = createParticipant(participantId, room, 1); // 이번 라운드 이기면 2점
-        Participant participant2 = createParticipant(101L, room, 2);        // 이미 2점
+        Participant participant2 = createParticipant(101L, room, 2); // 이미 2점
 
         SubmitDrawingRequest request = createSubmitDrawingRequest(participantId, "dummy-image");
 
-        RoundSubmission currentSubmission =
-                RoundSubmission.create(round, participant, "dummy-image", "사과", 0.97);
-        RoundSubmission otherSubmission =
-                RoundSubmission.create(round, participant2, "other-image", "사과", 0.60);
+        RoundSubmission currentSubmission = RoundSubmission.create(round, participant, "dummy-image", "사과", 0.97);
+        RoundSubmission otherSubmission = RoundSubmission.create(round, participant2, "other-image", "사과", 0.60);
 
         given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
         given(participantRepository.findByIdAndRoomId(participantId, roomId)).willReturn(Optional.of(participant));
-        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId)).willReturn(true);
-        given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, participantId)).willReturn(false);
-        given(aiInferenceService.infer("dummy-image", "사과"))
-                .willReturn(new AiInferenceResponse("사과", 0.97));
+        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(true);
+        given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(false);
+        given(aiInferenceService.infer("dummy-image", "사과")).willReturn(new AiInferenceResponse("사과", 0.97));
         given(roundSubmissionRepository.countByRoundId(roundId)).willReturn(2L);
         given(roundParticipantRepository.findByRoundId(roundId))
                 .willReturn(List.of(
                         createRoundParticipant(1L, round, participant),
-                        createRoundParticipant(2L, round, participant2)
-                ));
-        given(roundSubmissionRepository.findByRoundId(roundId))
-                .willReturn(List.of(currentSubmission, otherSubmission));
+                        createRoundParticipant(2L, round, participant2)));
+        given(roundSubmissionRepository.findByRoundId(roundId)).willReturn(List.of(currentSubmission, otherSubmission));
 
         given(participantRepository.findByRoomId(roomId)).willReturn(List.of(participant, participant2));
         given(keywordProvider.getRandomKeyword()).willReturn("자동차");
@@ -328,7 +321,8 @@ class RoundServiceTest {
         assertThat(participant.getRoundWinCount()).isEqualTo(2);
         assertThat(room.isPlaying()).isTrue();
 
-        then(roundParticipantRepository).should()
+        then(roundParticipantRepository)
+                .should()
                 .saveAll(argThat((Iterable<RoundParticipant> iterable) -> countIterable(iterable) == 2));
     }
 
@@ -346,25 +340,22 @@ class RoundServiceTest {
 
         SubmitDrawingRequest request = createSubmitDrawingRequest(participantId, "dummy-image");
 
-        RoundSubmission currentSubmission =
-                RoundSubmission.create(round, participant, "dummy-image", "사과", 0.99);
-        RoundSubmission otherSubmission =
-                RoundSubmission.create(round, participant2, "other-image", "사과", 0.71);
+        RoundSubmission currentSubmission = RoundSubmission.create(round, participant, "dummy-image", "사과", 0.99);
+        RoundSubmission otherSubmission = RoundSubmission.create(round, participant2, "other-image", "사과", 0.71);
 
         given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
         given(participantRepository.findByIdAndRoomId(participantId, roomId)).willReturn(Optional.of(participant));
-        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId)).willReturn(true);
-        given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, participantId)).willReturn(false);
-        given(aiInferenceService.infer("dummy-image", "사과"))
-                .willReturn(new AiInferenceResponse("사과", 0.99));
+        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(true);
+        given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(false);
+        given(aiInferenceService.infer("dummy-image", "사과")).willReturn(new AiInferenceResponse("사과", 0.99));
         given(roundSubmissionRepository.countByRoundId(roundId)).willReturn(2L);
         given(roundParticipantRepository.findByRoundId(roundId))
                 .willReturn(List.of(
                         createRoundParticipant(1L, round, participant),
-                        createRoundParticipant(2L, round, participant2)
-                ));
-        given(roundSubmissionRepository.findByRoundId(roundId))
-                .willReturn(List.of(currentSubmission, otherSubmission));
+                        createRoundParticipant(2L, round, participant2)));
+        given(roundSubmissionRepository.findByRoundId(roundId)).willReturn(List.of(currentSubmission, otherSubmission));
 
         SubmitDrawingResponse response = roundService.submitDrawing(roundId, request);
 
@@ -394,8 +385,10 @@ class RoundServiceTest {
 
         given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
         given(participantRepository.findByIdAndRoomId(participantId, roomId)).willReturn(Optional.of(participant));
-        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId)).willReturn(true);
-        given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, participantId)).willReturn(true);
+        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(true);
+        given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(true);
 
         assertThatThrownBy(() -> roundService.submitDrawing(roundId, request))
                 .isInstanceOf(IllegalStateException.class)
@@ -487,11 +480,8 @@ class RoundServiceTest {
     private Participant createParticipant(Long id, Room room, int roundWinCount) throws Exception {
         User user = mock(User.class);
 
-        Participant participant = Participant.builder()
-                .userId(user)
-                .room(room)
-                .isHost(false)
-                .build();
+        Participant participant =
+                Participant.builder().userId(user).room(room).isHost(false).build();
 
         setField(participant, "id", id);
         setField(participant, "roundWinCount", roundWinCount);

@@ -1,6 +1,7 @@
 package backend.drawrace.domain.round.dto;
 
 import backend.drawrace.domain.room.entity.Participant;
+
 import lombok.Builder;
 import lombok.Getter;
 

@@ -46,12 +46,7 @@ public class RoundSubmission extends BaseEntity {
     }
 
     public static RoundSubmission create(
-            Round round,
-            Participant participant,
-            String imageData,
-            String aiAnswer,
-            double score
-    ) {
+            Round round, Participant participant, String imageData, String aiAnswer, double score) {
         return new RoundSubmission(round, participant, imageData, aiAnswer, score);
     }
 }
