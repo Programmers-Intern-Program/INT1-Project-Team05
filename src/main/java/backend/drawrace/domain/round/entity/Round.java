@@ -42,16 +42,24 @@ public class Round extends BaseEntity {
 
     private LocalDateTime endedAt;
 
-    private Round(Room room, int roundNumber, String keyword) {
+    @Column(name = "is_tiebreaker", nullable = false)
+    private boolean isTiebreaker;
+
+    private Round(Room room, int roundNumber, String keyword, boolean isTiebreaker) {
         this.room = room;
         this.roundNumber = roundNumber;
         this.keyword = keyword;
         this.status = RoundStatus.READY;
         this.isActive = false;
+        this.isTiebreaker = isTiebreaker;
     }
 
     public static Round create(Room room, int roundNumber, String keyword) {
-        return new Round(room, roundNumber, keyword);
+        return new Round(room, roundNumber, keyword, false);
+    }
+
+    public static Round createTieBreaker(Room room, int roundNumber, String keyword) {
+        return new Round(room, roundNumber, keyword, true);
     }
 
     public void start() {

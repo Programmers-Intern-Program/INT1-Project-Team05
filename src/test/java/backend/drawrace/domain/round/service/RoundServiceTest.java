@@ -179,6 +179,158 @@ class RoundServiceTest {
     }
 
     @Test
+    @DisplayName("정답이면 다음 일반 라운드가 생성된다")
+    void submitDrawing_createNextRound() throws Exception {
+        // given
+        Long roomId = 1L;
+        Long roundId = 10L;
+        Long participantId = 100L;
+
+        Room room = createRoom(roomId, true);
+        setField(room, "totalRounds", (short) 3);
+
+        Round round = createInProgressRound(roundId, room, 1, "사과");
+        Participant participant = createParticipant(participantId, room, 0);
+        Participant participant2 = createParticipant(101L, room, 0);
+
+        SubmitDrawingRequest request = createSubmitDrawingRequest(participantId, "dummy-image");
+
+        given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
+        given(participantRepository.findByIdAndRoomId(participantId, roomId)).willReturn(Optional.of(participant));
+        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId)).willReturn(true);
+        given(aiInferenceService.infer("dummy-image")).willReturn("사과");
+        given(keywordProvider.getRandomKeyword()).willReturn("자동차");
+        given(participantRepository.findByRoomId(roomId)).willReturn(List.of(participant, participant2));
+
+        given(roundRepository.save(any(Round.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+        // when
+        SubmitDrawingResponse response = roundService.submitDrawing(roundId, request);
+
+        // then
+        assertThat(response.isCorrect()).isTrue();
+        assertThat(round.getStatus()).isEqualTo(RoundStatus.FINISHED);
+
+        then(roundRepository).should(times(1)).findById(roundId);
+        then(roundRepository).should(times(1)).save(any(Round.class));
+        then(roundParticipantRepository).should().saveAll(argThat((Iterable<RoundParticipant> iterable) -> {
+            int count = 0;
+            for (RoundParticipant ignored : iterable) {
+                count++;
+            }
+            return count == 2;
+        }));
+    }
+
+    @Test
+    @DisplayName("마지막 일반 라운드에서 단독 1등이면 게임이 종료되고 우승자가 결정된다")
+    void submitDrawing_finishGameWithSingleWinner() throws Exception {
+        // given
+        Long roomId = 1L;
+        Long roundId = 10L;
+        Long participantId = 100L;
+
+        Room room = createRoom(roomId, true);
+        setField(room, "totalRounds", (short) 3);
+
+        Round round = createInProgressRound(roundId, room, 3, "사과");
+        Participant participant = createParticipant(participantId, room, 0);
+        Participant participant2 = createParticipant(101L, room, 0);
+
+        setField(participant2, "roundWinCount", 0);
+
+        SubmitDrawingRequest request = createSubmitDrawingRequest(participantId, "dummy-image");
+
+        given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
+        given(participantRepository.findByIdAndRoomId(participantId, roomId)).willReturn(Optional.of(participant));
+        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId)).willReturn(true);
+        given(aiInferenceService.infer("dummy-image")).willReturn("사과");
+        given(participantRepository.findByRoomId(roomId)).willReturn(List.of(participant, participant2));
+
+        // when
+        SubmitDrawingResponse response = roundService.submitDrawing(roundId, request);
+
+        // then
+        assertThat(response.isCorrect()).isTrue();
+        assertThat(participant.isWinner()).isTrue();
+        assertThat(room.isPlaying()).isFalse();
+
+        then(roundRepository).should(never()).save(any(Round.class));
+    }
+
+    @Test
+    @DisplayName("마지막 일반 라운드에서 동점이면 결승 라운드가 생성된다")
+    void submitDrawing_createTieBreakerRound() throws Exception {
+        // given
+        Long roomId = 1L;
+        Long roundId = 10L;
+        Long participantId = 100L;
+
+        Room room = createRoom(roomId, true);
+        setField(room, "totalRounds", (short) 3);
+
+        Round round = createInProgressRound(roundId, room, 3, "사과");
+        Participant participant = createParticipant(participantId, room, 0);
+        Participant participant2 = createParticipant(101L, room, 1);
+
+        SubmitDrawingRequest request = createSubmitDrawingRequest(participantId, "dummy-image");
+
+        given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
+        given(participantRepository.findByIdAndRoomId(participantId, roomId)).willReturn(Optional.of(participant));
+        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId)).willReturn(true);
+        given(aiInferenceService.infer("dummy-image")).willReturn("사과");
+        given(participantRepository.findByRoomId(roomId)).willReturn(List.of(participant, participant2));
+        given(keywordProvider.getRandomKeyword()).willReturn("자동차");
+        given(roundRepository.save(any(Round.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+        // when
+        SubmitDrawingResponse response = roundService.submitDrawing(roundId, request);
+
+        // then
+        assertThat(response.isCorrect()).isTrue();
+        assertThat(room.isPlaying()).isTrue();
+        assertThat(participant.isWinner()).isFalse();
+        assertThat(participant2.isWinner()).isFalse();
+
+        then(roundRepository).should().save(any(Round.class));
+        then(roundParticipantRepository).should().saveAll(argThat((Iterable<RoundParticipant> iterable) -> {
+            int count = 0;
+            for (RoundParticipant ignored : iterable) {
+                count++;
+            }
+            return count == 2;
+        }));
+    }
+
+    @Test
+    @DisplayName("결승 라운드에서 정답이면 게임이 종료되고 정답자가 우승한다")
+    void submitDrawing_finishGameInTieBreaker() throws Exception {
+        // given
+        Long roomId = 1L;
+        Long roundId = 20L;
+        Long participantId = 100L;
+
+        Room room = createRoom(roomId, true);
+        Round round = createTieBreakerRound(roundId, room, 4, "사과");
+        Participant participant = createParticipant(participantId, room, 1);
+
+        SubmitDrawingRequest request = createSubmitDrawingRequest(participantId, "dummy-image");
+
+        given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
+        given(participantRepository.findByIdAndRoomId(participantId, roomId)).willReturn(Optional.of(participant));
+        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId)).willReturn(true);
+        given(aiInferenceService.infer("dummy-image")).willReturn("사과");
+
+        // when
+        SubmitDrawingResponse response = roundService.submitDrawing(roundId, request);
+
+        // then
+        assertThat(response.isCorrect()).isTrue();
+        assertThat(participant.isWinner()).isTrue();
+        assertThat(room.isPlaying()).isFalse();
+    }
+
+    @Test
     @DisplayName("그림 제출 성공 - 정답인 경우 점수가 증가하고 라운드가 종료된다")
     void submitDrawing_correctAnswer() throws Exception {
         // given
@@ -389,5 +541,12 @@ class RoundServiceTest {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.set(target, value);
+    }
+
+    private Round createTieBreakerRound(Long id, Room room, int roundNumber, String keyword) throws Exception {
+        Round round = Round.createTieBreaker(room, roundNumber, keyword);
+        round.start();
+        setField(round, "id", id);
+        return round;
     }
 }

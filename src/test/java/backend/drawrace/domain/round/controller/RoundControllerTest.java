@@ -19,9 +19,9 @@ import backend.drawrace.domain.round.dto.RoundStartResponse;
 import backend.drawrace.domain.round.entity.RoundStatus;
 import backend.drawrace.domain.round.service.RoundService;
 
-@WebMvcTest(RoundController.class)
+@WebMvcTest(RoundGameController.class)
 @AutoConfigureMockMvc(addFilters = false)
-class RoundControllerTest {
+class RoundGameControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -45,7 +45,8 @@ class RoundControllerTest {
 
         given(roundService.startGame(roomId)).willReturn(response);
 
-        mockMvc.perform(post("/api/rooms/{roomId}/start", roomId).contentType(MediaType.APPLICATION_JSON))
+        mockMvc.perform(post("/api/rooms/{roomId}/start", roomId)
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.roomId").value(1))
                 .andExpect(jsonPath("$.roundId").value(10))

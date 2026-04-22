@@ -55,12 +55,7 @@ public class RoundService {
         Round savedRound = roundRepository.save(firstRound);
 
         List<Participant> participants = participantRepository.findByRoomId(roomId);
-
-        List<RoundParticipant> roundParticipants = participants.stream()
-                .map(participant -> RoundParticipant.of(savedRound, participant))
-                .toList();
-
-        roundParticipantRepository.saveAll(roundParticipants);
+        saveRoundParticipants(savedRound, participants);
 
         return RoundStartResponse.from(savedRound);
     }
@@ -92,6 +87,39 @@ public class RoundService {
         if (correct) {
             participant.increaseRoundWinCount();
             round.finish();
+
+            Room room = round.getRoom();
+
+            // 1. 일반 라운드이고, 아직 다음 일반 라운드가 남아 있는 경우
+            if (!round.isTiebreaker() && round.getRoundNumber() < room.getTotalRounds()) {
+                Round nextRound = createNextRound(room, round.getRoundNumber() + 1);
+
+                List<Participant> participants = participantRepository.findByRoomId(room.getId());
+                saveRoundParticipants(nextRound, participants);
+            }
+
+            // 2. 일반 라운드이고, 마지막 일반 라운드인 경우
+            else if (!round.isTiebreaker() && round.getRoundNumber() == room.getTotalRounds()) {
+                List<Participant> topScorers = findTopScorers(room.getId());
+
+                // 단독 1등
+                if (topScorers.size() == 1) {
+                    Participant winner = topScorers.get(0);
+                    winner.markWinner();
+                    room.finishGame();
+                }
+                // 동점자 발생 -> 결승 라운드
+                else {
+                    Round tieBreakerRound = createTieBreakerRound(room, round.getRoundNumber() + 1);
+                    saveRoundParticipants(tieBreakerRound, topScorers);
+                }
+            }
+
+            // 3. 결승 라운드인 경우
+            else if (round.isTiebreaker()) {
+                participant.markWinner();
+                room.finishGame();
+            }
         }
 
         return SubmitDrawingResponse.builder()
@@ -101,5 +129,44 @@ public class RoundService {
                 .keyword(round.getKeyword())
                 .roundWinCount(participant.getRoundWinCount())
                 .build();
+    }
+
+    private void saveRoundParticipants(Round round, List<Participant> participants) {
+        List<RoundParticipant> roundParticipants = participants.stream()
+                .map(participant -> RoundParticipant.of(round, participant))
+                .toList();
+
+        roundParticipantRepository.saveAll(roundParticipants);
+    }
+
+    private Round createNextRound(Room room, int nextRoundNumber) {
+        String keyword = keywordProvider.getRandomKeyword();
+
+        Round nextRound = Round.create(room, nextRoundNumber, keyword);
+        nextRound.start();
+
+        return roundRepository.save(nextRound);
+    }
+
+    private Round createTieBreakerRound(Room room, int nextRoundNumber) {
+        String keyword = keywordProvider.getRandomKeyword();
+
+        Round tieBreakerRound = Round.createTieBreaker(room, nextRoundNumber, keyword);
+        tieBreakerRound.start();
+
+        return roundRepository.save(tieBreakerRound);
+    }
+
+    private List<Participant> findTopScorers(Long roomId) {
+        List<Participant> participants = participantRepository.findByRoomId(roomId);
+
+        int maxWinCount = participants.stream()
+                .mapToInt(Participant::getRoundWinCount)
+                .max()
+                .orElse(0);
+
+        return participants.stream()
+                .filter(participant -> participant.getRoundWinCount() == maxWinCount)
+                .toList();
     }
 }
