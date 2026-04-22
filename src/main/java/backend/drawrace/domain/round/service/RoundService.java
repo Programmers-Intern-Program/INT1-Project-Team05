@@ -1,7 +1,10 @@
 package backend.drawrace.domain.round.service;
 
+import backend.drawrace.domain.round.entity.RoundParticipant;
+import backend.drawrace.domain.round.repository.RoundParticipantRepository;
 import jakarta.persistence.EntityNotFoundException;
 
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +32,7 @@ public class RoundService {
     private final KeywordProvider keywordProvider;
     private final RoundValidator roundValidator;
     private final AiInferenceService aiInferenceService;
+    private final RoundParticipantRepository roundParticipantRepository;
 
     @Transactional
     public RoundStartResponse startGame(Long roomId) {
@@ -48,6 +52,15 @@ public class RoundService {
         room.startGame();
 
         Round savedRound = roundRepository.save(firstRound);
+
+        List<Participant> participants = participantRepository.findByRoomId(roomId);
+
+        List<RoundParticipant> roundParticipants = participants.stream()
+                .map(participant -> RoundParticipant.of(savedRound, participant))
+                .toList();
+
+        roundParticipantRepository.saveAll(roundParticipants);
+
         return RoundStartResponse.from(savedRound);
     }
 
@@ -63,6 +76,13 @@ public class RoundService {
                 .findByIdAndRoomId(request.getParticipantId(), round.getRoom().getId())
                 .orElseThrow(() -> new EntityNotFoundException(
                         "해당 라운드의 방에 속한 참가자가 아닙니다. participantId=" + request.getParticipantId()));
+
+        boolean canPlay = roundParticipantRepository
+                .existsByRoundIdAndParticipantId(round.getId(), participant.getId());
+
+        if (!canPlay) {
+            throw new IllegalStateException("이번 라운드 참가 대상이 아닙니다. participantId=" + participant.getId());
+        }
 
         String aiAnswer = aiInferenceService.infer(request.getImageData());
 
