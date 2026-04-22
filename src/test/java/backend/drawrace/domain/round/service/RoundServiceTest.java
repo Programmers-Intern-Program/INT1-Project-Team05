@@ -1,9 +1,12 @@
 package backend.drawrace.domain.round.service;
 
+import backend.drawrace.domain.room.entity.Participant;
 import backend.drawrace.domain.room.entity.Room;
 import backend.drawrace.domain.room.repository.ParticipantRepository;
 import backend.drawrace.domain.room.repository.RoomRepository;
 import backend.drawrace.domain.round.dto.RoundStartResponse;
+import backend.drawrace.domain.round.dto.SubmitDrawingRequest;
+import backend.drawrace.domain.round.dto.SubmitDrawingResponse;
 import backend.drawrace.domain.round.entity.Round;
 import backend.drawrace.domain.round.entity.RoundStatus;
 import backend.drawrace.domain.round.repository.RoundRepository;
@@ -19,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
 import java.util.Optional;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
@@ -40,6 +44,9 @@ class RoundServiceTest {
 
     @Mock
     private RoundValidator roundValidator;
+
+    @Mock
+    private AiInferenceService aiInferenceService;
 
     @InjectMocks
     private RoundService roundService;
@@ -144,7 +151,7 @@ class RoundServiceTest {
         // given
         Long roomId = 1L;
         Room room = createRoom(roomId, false);
-        Round activeRound = createRound(99L, room, 1, "자동차");
+        Round activeRound = createInProgressRound(99L, room, 1, "자동차");
 
         given(roomRepository.findById(roomId)).willReturn(Optional.of(room));
         given(participantRepository.countByRoomId(roomId)).willReturn(2L);
@@ -160,6 +167,135 @@ class RoundServiceTest {
                 .hasMessageContaining("이미 진행 중인 라운드");
     }
 
+    @Test
+    @DisplayName("그림 제출 성공 - 정답인 경우 점수가 증가하고 라운드가 종료된다")
+    void submitDrawing_correctAnswer() throws Exception {
+        // given
+        Long roomId = 1L;
+        Long roundId = 10L;
+        Long participantId = 100L;
+
+        Room room = createRoom(roomId, true);
+        Round round = createInProgressRound(roundId, room, 1, "사과");
+        Participant participant = createParticipant(participantId, room, 0);
+
+        SubmitDrawingRequest request = createSubmitDrawingRequest(participantId, "dummy-image");
+
+        given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
+        given(participantRepository.findByIdAndRoomId(participantId, roomId)).willReturn(Optional.of(participant));
+        given(aiInferenceService.infer("dummy-image")).willReturn("사과");
+
+        // when
+        SubmitDrawingResponse response = roundService.submitDrawing(roundId, request);
+
+        // then
+        then(roundValidator).should().validateRoundInProgress(round);
+        then(aiInferenceService).should().infer("dummy-image");
+
+        assertThat(response.isCorrect()).isTrue();
+        assertThat(response.getAiAnswer()).isEqualTo("사과");
+        assertThat(response.getKeyword()).isEqualTo("사과");
+        assertThat(response.getRoundWinCount()).isEqualTo(1);
+
+        assertThat(participant.getRoundWinCount()).isEqualTo(1);
+        assertThat(round.getStatus()).isEqualTo(RoundStatus.FINISHED);
+        assertThat(round.isActive()).isFalse();
+        assertThat(round.getEndedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("그림 제출 성공 - 오답인 경우 점수는 증가하지 않고 라운드는 유지된다")
+    void submitDrawing_wrongAnswer() throws Exception {
+        // given
+        Long roomId = 1L;
+        Long roundId = 10L;
+        Long participantId = 100L;
+
+        Room room = createRoom(roomId, true);
+        Round round = createInProgressRound(roundId, room, 1, "사과");
+        Participant participant = createParticipant(participantId, room, 0);
+
+        SubmitDrawingRequest request = createSubmitDrawingRequest(participantId, "dummy-image");
+
+        given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
+        given(participantRepository.findByIdAndRoomId(participantId, roomId)).willReturn(Optional.of(participant));
+        given(aiInferenceService.infer("dummy-image")).willReturn("자동차");
+
+        // when
+        SubmitDrawingResponse response = roundService.submitDrawing(roundId, request);
+
+        // then
+        assertThat(response.isCorrect()).isFalse();
+        assertThat(response.getAiAnswer()).isEqualTo("자동차");
+        assertThat(response.getKeyword()).isEqualTo("사과");
+        assertThat(response.getRoundWinCount()).isEqualTo(0);
+
+        assertThat(participant.getRoundWinCount()).isEqualTo(0);
+        assertThat(round.getStatus()).isEqualTo(RoundStatus.IN_PROGRESS);
+        assertThat(round.isActive()).isTrue();
+        assertThat(round.getEndedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 라운드에 제출하면 예외가 발생한다")
+    void submitDrawing_roundNotFound() {
+        // given
+        Long roundId = 10L;
+        SubmitDrawingRequest request = createSubmitDrawingRequest(100L, "dummy-image");
+
+        given(roundRepository.findById(roundId)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> roundService.submitDrawing(roundId, request))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining("존재하지 않는 라운드입니다");
+    }
+
+    @Test
+    @DisplayName("진행 중이 아닌 라운드에 제출하면 예외가 발생한다")
+    void submitDrawing_roundNotInProgress() throws Exception {
+        // given
+        Long roomId = 1L;
+        Long roundId = 10L;
+
+        Room room = createRoom(roomId, true);
+        Round round = createFinishedRound(roundId, room, 1, "사과");
+        SubmitDrawingRequest request = createSubmitDrawingRequest(100L, "dummy-image");
+
+        given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
+
+        willThrow(new IllegalStateException("진행 중인 라운드가 아닙니다. roundId=" + roundId))
+                .given(roundValidator)
+                .validateRoundInProgress(round);
+
+        // when & then
+        assertThatThrownBy(() -> roundService.submitDrawing(roundId, request))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("진행 중인 라운드가 아닙니다");
+    }
+
+    @Test
+    @DisplayName("해당 방 소속 참가자가 아니면 예외가 발생한다")
+    void submitDrawing_participantNotInRoom() throws Exception {
+        // given
+        Long roomId = 1L;
+        Long roundId = 10L;
+        Long participantId = 100L;
+
+        Room room = createRoom(roomId, true);
+        Round round = createInProgressRound(roundId, room, 1, "사과");
+        SubmitDrawingRequest request = createSubmitDrawingRequest(participantId, "dummy-image");
+
+        given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
+        given(participantRepository.findByIdAndRoomId(participantId, roomId)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> roundService.submitDrawing(roundId, request))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining("해당 라운드의 방에 속한 참가자가 아닙니다");
+    }
+
+    // ------------------ helper Method -----------------------
     private Room createRoom(Long id, boolean isPlaying) throws Exception {
         Room room = Room.builder()
                 .title("테스트 방")
@@ -174,10 +310,37 @@ class RoundServiceTest {
         return room;
     }
 
-    private Round createRound(Long id, Room room, int roundNumber, String keyword) throws Exception {
+    private Round createInProgressRound(Long id, Room room, int roundNumber, String keyword) throws Exception {
         Round round = Round.create(room, roundNumber, keyword);
+        round.start();
         setField(round, "id", id);
         return round;
+    }
+
+    private Round createFinishedRound(Long id, Room room, int roundNumber, String keyword) throws Exception {
+        Round round = Round.create(room, roundNumber, keyword);
+        round.start();
+        round.finish();
+        setField(round, "id", id);
+        return round;
+    }
+
+    private Participant createParticipant(Long id, Room room, int roundWinCount) throws Exception {
+        Participant participant = Participant.builder()
+                .room(room)
+                .isHost(false)
+                .build();
+
+        setField(participant, "id", id);
+        setField(participant, "roundWinCount", roundWinCount);
+        return participant;
+    }
+
+    private SubmitDrawingRequest createSubmitDrawingRequest(Long participantId, String imageData) {
+        SubmitDrawingRequest request = new SubmitDrawingRequest();
+        ReflectionTestUtils.setField(request, "participantId", participantId);
+        ReflectionTestUtils.setField(request, "imageData", imageData);
+        return request;
     }
 
     private void setField(Object target, String fieldName, Object value) throws Exception {
