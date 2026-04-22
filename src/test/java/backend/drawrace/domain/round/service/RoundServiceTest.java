@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 
-import backend.drawrace.domain.user.entity.User;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Optional;
@@ -32,6 +31,7 @@ import backend.drawrace.domain.round.entity.RoundStatus;
 import backend.drawrace.domain.round.repository.RoundParticipantRepository;
 import backend.drawrace.domain.round.repository.RoundRepository;
 import backend.drawrace.domain.round.validator.RoundValidator;
+import backend.drawrace.domain.user.entity.User;
 
 @ExtendWith(MockitoExtension.class)
 class RoundServiceTest {
@@ -89,8 +89,7 @@ class RoundServiceTest {
         then(keywordProvider).should().getRandomKeyword();
         then(roundRepository).should().save(any(Round.class));
         then(participantRepository).should().findByRoomId(roomId);
-        then(roundParticipantRepository).should()
-                .saveAll(argThat((List<RoundParticipant> list) -> list.size() == 2));
+        then(roundParticipantRepository).should().saveAll(argThat((List<RoundParticipant> list) -> list.size() == 2));
 
         assertThat(response.getRoomId()).isEqualTo(roomId);
         assertThat(response.getRoundId()).isEqualTo(10L);
@@ -195,7 +194,8 @@ class RoundServiceTest {
 
         given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
         given(participantRepository.findByIdAndRoomId(participantId, roomId)).willReturn(Optional.of(participant));
-        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId)).willReturn(true);
+        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(true);
         given(aiInferenceService.infer("dummy-image")).willReturn("사과");
 
         // when
@@ -233,7 +233,8 @@ class RoundServiceTest {
 
         given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
         given(participantRepository.findByIdAndRoomId(participantId, roomId)).willReturn(Optional.of(participant));
-        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId)).willReturn(true);
+        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(true);
         given(aiInferenceService.infer("dummy-image")).willReturn("자동차");
 
         // when
@@ -327,7 +328,8 @@ class RoundServiceTest {
 
         given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
         given(participantRepository.findByIdAndRoomId(participantId, roomId)).willReturn(Optional.of(participant));
-        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId)).willReturn(false);
+        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(false);
 
         // when & then
         assertThatThrownBy(() -> roundService.submitDrawing(roundId, request))
@@ -368,11 +370,8 @@ class RoundServiceTest {
     private Participant createParticipant(Long id, Room room, int roundWinCount) throws Exception {
         User user = mock(User.class);
 
-        Participant participant = Participant.builder()
-                .userId(user)
-                .room(room)
-                .isHost(false)
-                .build();
+        Participant participant =
+                Participant.builder().userId(user).room(room).isHost(false).build();
 
         setField(participant, "id", id);
         setField(participant, "roundWinCount", roundWinCount);

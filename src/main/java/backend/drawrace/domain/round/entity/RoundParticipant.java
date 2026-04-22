@@ -35,9 +35,6 @@ public class RoundParticipant extends BaseEntity {
     }
 
     public static RoundParticipant of(Round round, Participant participant) {
-        return RoundParticipant.builder()
-                .round(round)
-                .participant(participant)
-                .build();
+        return RoundParticipant.builder().round(round).participant(participant).build();
     }
 }

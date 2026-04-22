@@ -1,10 +1,9 @@
 package backend.drawrace.domain.round.service;
 
-import backend.drawrace.domain.round.entity.RoundParticipant;
-import backend.drawrace.domain.round.repository.RoundParticipantRepository;
+import java.util.List;
+
 import jakarta.persistence.EntityNotFoundException;
 
-import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +15,8 @@ import backend.drawrace.domain.round.dto.RoundStartResponse;
 import backend.drawrace.domain.round.dto.SubmitDrawingRequest;
 import backend.drawrace.domain.round.dto.SubmitDrawingResponse;
 import backend.drawrace.domain.round.entity.Round;
+import backend.drawrace.domain.round.entity.RoundParticipant;
+import backend.drawrace.domain.round.repository.RoundParticipantRepository;
 import backend.drawrace.domain.round.repository.RoundRepository;
 import backend.drawrace.domain.round.validator.RoundValidator;
 
@@ -77,8 +78,8 @@ public class RoundService {
                 .orElseThrow(() -> new EntityNotFoundException(
                         "해당 라운드의 방에 속한 참가자가 아닙니다. participantId=" + request.getParticipantId()));
 
-        boolean canPlay = roundParticipantRepository
-                .existsByRoundIdAndParticipantId(round.getId(), participant.getId());
+        boolean canPlay =
+                roundParticipantRepository.existsByRoundIdAndParticipantId(round.getId(), participant.getId());
 
         if (!canPlay) {
             throw new IllegalStateException("이번 라운드 참가 대상이 아닙니다. participantId=" + participant.getId());
