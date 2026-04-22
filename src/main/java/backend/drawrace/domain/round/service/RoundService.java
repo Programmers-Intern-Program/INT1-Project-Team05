@@ -1,5 +1,7 @@
 package backend.drawrace.domain.round.service;
 
+import backend.drawrace.domain.round.dto.CurrentRoundResponse;
+import backend.drawrace.domain.round.dto.RoundParticipantResponse;
 import java.util.List;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -129,6 +131,19 @@ public class RoundService {
                 .keyword(round.getKeyword())
                 .roundWinCount(participant.getRoundWinCount())
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public CurrentRoundResponse getCurrentRound(Long roomId) {
+        Round currentRound = roundRepository.findByRoomIdAndIsActiveTrue(roomId)
+                .orElseThrow(() -> new EntityNotFoundException("현재 진행 중인 라운드가 없습니다. roomId=" + roomId));
+
+        List<RoundParticipantResponse> participants = roundParticipantRepository.findByRoundId(currentRound.getId())
+                .stream()
+                .map(roundParticipant -> RoundParticipantResponse.from(roundParticipant.getParticipant()))
+                .toList();
+
+        return CurrentRoundResponse.of(currentRound, participants);
     }
 
     private void saveRoundParticipants(Round round, List<Participant> participants) {

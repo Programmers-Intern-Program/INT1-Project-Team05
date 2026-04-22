@@ -1,5 +1,6 @@
 package backend.drawrace.domain.round.controller;
 
+import backend.drawrace.domain.round.dto.CurrentRoundResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,5 +19,10 @@ public class RoundGameController {
     @PostMapping("/{roomId}/start")
     public ResponseEntity<RoundStartResponse> startGame(@PathVariable Long roomId) {
         return ResponseEntity.ok(roundService.startGame(roomId));
+    }
+
+    @GetMapping("/{roomId}/rounds/current")
+    public ResponseEntity<CurrentRoundResponse> getCurrentRound(@PathVariable Long roomId) {
+        return ResponseEntity.ok(roundService.getCurrentRound(roomId));
     }
 }

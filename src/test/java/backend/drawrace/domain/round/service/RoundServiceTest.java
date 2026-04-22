@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 
+import backend.drawrace.domain.round.dto.CurrentRoundResponse;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Optional;
@@ -491,6 +492,51 @@ class RoundServiceTest {
         assertThatThrownBy(() -> roundService.submitDrawing(roundId, request))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("이번 라운드 참가 대상이 아닙니다");
+    }
+
+    @Test
+    @DisplayName("현재 진행 중인 라운드를 조회한다")
+    void getCurrentRound_success() throws Exception {
+        // given
+        Long roomId = 1L;
+        Long roundId = 10L;
+
+        Room room = createRoom(roomId, true);
+        Round round = createInProgressRound(roundId, room, 2, "사과");
+        Participant participant1 = createParticipant(100L, room, 1);
+        Participant participant2 = createParticipant(101L, room, 0);
+
+        RoundParticipant roundParticipant1 = RoundParticipant.of(round, participant1);
+        RoundParticipant roundParticipant2 = RoundParticipant.of(round, participant2);
+
+        given(roundRepository.findByRoomIdAndIsActiveTrue(roomId)).willReturn(Optional.of(round));
+        given(roundParticipantRepository.findByRoundId(roundId))
+                .willReturn(List.of(roundParticipant1, roundParticipant2));
+
+        // when
+        CurrentRoundResponse response = roundService.getCurrentRound(roomId);
+
+        // then
+        assertThat(response.getRoomId()).isEqualTo(roomId);
+        assertThat(response.getRoundId()).isEqualTo(roundId);
+        assertThat(response.getRoundNumber()).isEqualTo(2);
+        assertThat(response.getKeyword()).isEqualTo("사과");
+        assertThat(response.getStatus()).isEqualTo(RoundStatus.IN_PROGRESS);
+        assertThat(response.isTiebreaker()).isFalse();
+        assertThat(response.getParticipants()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("현재 진행 중인 라운드가 없으면 예외가 발생한다")
+    void getCurrentRound_fail_noActiveRound() {
+        // given
+        Long roomId = 1L;
+        given(roundRepository.findByRoomIdAndIsActiveTrue(roomId)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> roundService.getCurrentRound(roomId))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining("현재 진행 중인 라운드가 없습니다");
     }
 
     // ------------------ helper Method -----------------------

@@ -4,6 +4,8 @@ import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import backend.drawrace.domain.round.dto.CurrentRoundResponse;
+import backend.drawrace.domain.round.dto.RoundParticipantResponse;
 import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.DisplayName;
@@ -53,5 +55,50 @@ class RoundGameControllerTest {
                 .andExpect(jsonPath("$.keyword").value("사과"))
                 .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
                 .andExpect(jsonPath("$.startedAt").exists());
+    }
+
+    @Test
+    @DisplayName("현재 라운드 조회 요청 성공")
+    void getCurrentRound_success() throws Exception {
+        Long roomId = 1L;
+
+        CurrentRoundResponse response = CurrentRoundResponse.builder()
+                .roomId(roomId)
+                .roundId(10L)
+                .roundNumber(2)
+                .keyword("사과")
+                .status(RoundStatus.IN_PROGRESS)
+                .isTiebreaker(false)
+                .startedAt(LocalDateTime.of(2026, 4, 21, 12, 0, 0))
+                .endedAt(null)
+                .participants(java.util.List.of(
+                        RoundParticipantResponse.builder()
+                                .participantId(100L)
+                                .roundWinCount(1)
+                                .isHost(true)
+                                .isWinner(false)
+                                .build(),
+                        RoundParticipantResponse.builder()
+                                .participantId(101L)
+                                .roundWinCount(0)
+                                .isHost(false)
+                                .isWinner(false)
+                                .build()
+                ))
+                .build();
+
+        given(roundService.getCurrentRound(roomId)).willReturn(response);
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .get("/api/rooms/{roomId}/rounds/current", roomId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.roomId").value(1))
+                .andExpect(jsonPath("$.roundId").value(10))
+                .andExpect(jsonPath("$.roundNumber").value(2))
+                .andExpect(jsonPath("$.keyword").value("사과"))
+                .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
+                .andExpect(jsonPath("$.isTiebreaker").value(false))
+                .andExpect(jsonPath("$.participants.length()").value(2));
     }
 }
