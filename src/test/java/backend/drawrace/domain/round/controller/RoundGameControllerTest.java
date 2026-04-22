@@ -96,7 +96,7 @@ class RoundGameControllerTest {
                 .andExpect(jsonPath("$.roundNumber").value(2))
                 .andExpect(jsonPath("$.keyword").value("사과"))
                 .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
-                .andExpect(jsonPath("$.isTiebreaker").value(false))
+                .andExpect(jsonPath("$.tiebreaker").value(false))
                 .andExpect(jsonPath("$.participants.length()").value(2));
     }
 }
