@@ -2,6 +2,7 @@ package backend.drawrace.domain.round.validator;
 
 import backend.drawrace.domain.room.entity.Room;
 import backend.drawrace.domain.round.entity.Round;
+import backend.drawrace.domain.round.entity.RoundStatus;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -31,5 +32,11 @@ public class RoundValidator {
         validateRoomNotPlaying(room);
         validateParticipantCount(participantCount, room.getId());
         validateNoActiveRound(activeRound);
+    }
+
+    public void validateRoundInProgress(Round round) {
+        if (round.getStatus() != RoundStatus.IN_PROGRESS) {
+            throw new IllegalStateException("진행 중인 라운드가 아닙니다. roundId=" + round.getId());
+        }
     }
 }

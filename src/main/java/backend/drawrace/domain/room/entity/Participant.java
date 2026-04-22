@@ -37,4 +37,12 @@ public class Participant extends BaseEntity {
 
     @Column(name = "is_host", nullable = false)
     private boolean isHost;
+
+    public void increaseRoundWinCount() {
+        this.roundWinCount++;
+    }
+
+    public void markWinner() {
+        this.isWinner = true;
+    }
 }
