@@ -3,6 +3,7 @@ package backend.drawrace.domain.round.service;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
 
+import backend.drawrace.domain.user.entity.User;
 import java.lang.reflect.Field;
 import java.util.Optional;
 
@@ -325,7 +326,13 @@ class RoundServiceTest {
     }
 
     private Participant createParticipant(Long id, Room room, int roundWinCount) throws Exception {
-        Participant participant = Participant.builder().room(room).isHost(false).build();
+        User user = mock(User.class);
+
+        Participant participant = Participant.builder()
+                .userId(user)
+                .room(room)
+                .isHost(false)
+                .build();
 
         setField(participant, "id", id);
         setField(participant, "roundWinCount", roundWinCount);
