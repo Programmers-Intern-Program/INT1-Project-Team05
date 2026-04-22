@@ -4,8 +4,6 @@ import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import java.time.LocalDateTime;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,44 +13,59 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import backend.drawrace.domain.round.dto.RoundStartResponse;
-import backend.drawrace.domain.round.entity.RoundStatus;
+import backend.drawrace.domain.round.dto.SubmitDrawingRequest;
+import backend.drawrace.domain.round.dto.SubmitDrawingResponse;
 import backend.drawrace.domain.round.service.RoundService;
 
-@WebMvcTest(RoundGameController.class)
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+@WebMvcTest(RoundController.class)
 @AutoConfigureMockMvc(addFilters = false)
-class RoundGameControllerTest {
+class RoundControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @MockBean
     private RoundService roundService;
 
     @Test
-    @DisplayName("게임 시작 요청 성공")
-    void startGame_success() throws Exception {
-        Long roomId = 1L;
+    @DisplayName("그림 제출 요청 성공")
+    void submitDrawing_success() throws Exception {
+        Long roundId = 10L;
 
-        RoundStartResponse response = RoundStartResponse.builder()
-                .roomId(roomId)
-                .roundId(10L)
-                .roundNumber(1)
+        SubmitDrawingRequest request = new SubmitDrawingRequest();
+        setField(request, "participantId", 100L);
+        setField(request, "imageData", "dummy-image");
+
+        SubmitDrawingResponse response = SubmitDrawingResponse.builder()
+                .roundId(roundId)
+                .aiAnswer("사과")
+                .correct(true)
                 .keyword("사과")
-                .status(RoundStatus.IN_PROGRESS)
-                .startedAt(LocalDateTime.of(2026, 4, 21, 12, 0, 0))
+                .roundWinCount(1)
                 .build();
 
-        given(roundService.startGame(roomId)).willReturn(response);
+        given(roundService.submitDrawing(roundId, org.mockito.ArgumentMatchers.any(SubmitDrawingRequest.class)))
+                .willReturn(response);
 
-        mockMvc.perform(post("/api/rooms/{roomId}/start", roomId)
-                        .contentType(MediaType.APPLICATION_JSON))
+        mockMvc.perform(post("/api/rounds/{roundId}/submit", roundId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.roomId").value(1))
                 .andExpect(jsonPath("$.roundId").value(10))
-                .andExpect(jsonPath("$.roundNumber").value(1))
+                .andExpect(jsonPath("$.aiAnswer").value("사과"))
+                .andExpect(jsonPath("$.correct").value(true))
                 .andExpect(jsonPath("$.keyword").value("사과"))
-                .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
-                .andExpect(jsonPath("$.startedAt").exists());
+                .andExpect(jsonPath("$.roundWinCount").value(1));
+    }
+
+    private void setField(Object target, String fieldName, Object value) throws Exception {
+        java.lang.reflect.Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(target, value);
     }
 }
