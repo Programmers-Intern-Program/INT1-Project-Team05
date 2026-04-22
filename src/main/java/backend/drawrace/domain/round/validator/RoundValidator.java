@@ -11,7 +11,8 @@ import backend.drawrace.domain.round.entity.RoundStatus;
 @Component
 public class RoundValidator {
 
-    public void validateStartGame(Room room, long participantCount, Optional<Round> activeRound) {
+    public void validateStartGame(Room room, long participantCount, Optional<Round> activeRound, Long userId) {
+        validateIsHost(room, userId);
         validateRoomNotPlaying(room);
         validateParticipantCount(participantCount, room.getId());
         validateNoActiveRound(activeRound);
@@ -26,6 +27,12 @@ public class RoundValidator {
     public void validateRoundParticipant(boolean canPlay, Long participantId) {
         if (!canPlay) {
             throw new IllegalStateException("이번 라운드 참가 대상이 아닙니다. participantId=" + participantId);
+        }
+    }
+
+    private void validateIsHost(Room room, Long userId) {
+        if (!room.getHostId().equals(userId)) {
+            throw new IllegalStateException("방장만 게임을 시작할 수 있습니다. hostId=" + room.getHostId());
         }
     }
 

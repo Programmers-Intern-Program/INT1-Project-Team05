@@ -71,7 +71,8 @@ class RoundServiceTest {
     @DisplayName("게임 시작 성공")
     void startGame_success() throws Exception {
         Long roomId = 1L;
-        Room room = createRoom(roomId, false);
+        Long hostId = 1L; // 방장 ID
+        Room room = createRoom(roomId, false, 1L);
         Participant participant1 = createParticipant(100L, room, 0);
         Participant participant2 = createParticipant(101L, room, 0);
 
@@ -86,9 +87,9 @@ class RoundServiceTest {
             return saved;
         });
 
-        RoundStartResponse response = roundService.startGame(roomId);
+        RoundStartResponse response = roundService.startGame(roomId, hostId);
 
-        then(roundValidator).should().validateStartGame(eq(room), eq(2L), eq(Optional.empty()));
+        then(roundValidator).should().validateStartGame(eq(room), eq(2L), eq(Optional.empty()), eq(hostId));
         then(roundParticipantRepository)
                 .should()
                 .saveAll(argThat((Iterable<RoundParticipant> iterable) -> countIterable(iterable) == 2));
@@ -106,9 +107,10 @@ class RoundServiceTest {
     @DisplayName("존재하지 않는 방이면 게임 시작 예외")
     void startGame_roomNotFound() {
         Long roomId = 1L;
+        Long userId = 1L;
         given(roomRepository.findById(roomId)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> roundService.startGame(roomId))
+        assertThatThrownBy(() -> roundService.startGame(roomId, userId))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessageContaining("존재하지 않는 방입니다");
     }
@@ -120,7 +122,7 @@ class RoundServiceTest {
         Long roundId = 10L;
         Long participantId = 100L;
 
-        Room room = createRoom(roomId, true);
+        Room room = createRoom(roomId, true, 1L);
         Round round = createInProgressRound(roundId, room, 1, "사과");
         Participant participant = createParticipant(participantId, room, 0);
 
@@ -160,7 +162,7 @@ class RoundServiceTest {
         Long roundId = 10L;
         Long participantId = 100L;
 
-        Room room = createRoom(roomId, true);
+        Room room = createRoom(roomId, true, 1L);
         setField(room, "totalRounds", (short) 3);
 
         Round round = createInProgressRound(roundId, room, 1, "사과");
@@ -218,7 +220,7 @@ class RoundServiceTest {
         Long roundId = 30L;
         Long participantId = 100L;
 
-        Room room = createRoom(roomId, true);
+        Room room = createRoom(roomId, true, 1L);
         setField(room, "totalRounds", (short) 3);
 
         Round round = createInProgressRound(roundId, room, 3, "사과");
@@ -262,7 +264,7 @@ class RoundServiceTest {
         Long roundId = 30L;
         Long participantId = 100L;
 
-        Room room = createRoom(roomId, true);
+        Room room = createRoom(roomId, true, 1L);
         setField(room, "totalRounds", (short) 3);
 
         Round round = createInProgressRound(roundId, room, 3, "사과");
@@ -319,7 +321,7 @@ class RoundServiceTest {
         Long roundId = 50L;
         Long participantId = 100L;
 
-        Room room = createRoom(roomId, true);
+        Room room = createRoom(roomId, true, 1L);
         Round round = createTieBreakerRound(roundId, room, 4, "사과");
         Participant participant = createParticipant(participantId, room, 2);
         Participant participant2 = createParticipant(101L, room, 2);
@@ -360,7 +362,7 @@ class RoundServiceTest {
         Long roundId = 10L;
         Long participantId = 100L;
 
-        Room room = createRoom(roomId, true);
+        Room room = createRoom(roomId, true, 1L);
         Round round = createInProgressRound(roundId, room, 1, "사과");
         Participant participant = createParticipant(participantId, room, 0);
 
@@ -397,7 +399,7 @@ class RoundServiceTest {
         Long roomId = 1L;
         Long roundId = 10L;
 
-        Room room = createRoom(roomId, true);
+        Room room = createRoom(roomId, true, 1L);
         Round round = createInProgressRound(roundId, room, 2, "사과");
         Participant participant1 = createParticipant(100L, room, 1);
         Participant participant2 = createParticipant(101L, room, 0);
@@ -431,10 +433,10 @@ class RoundServiceTest {
                 .hasMessageContaining("현재 진행 중인 라운드가 없습니다");
     }
 
-    private Room createRoom(Long id, boolean isPlaying) throws Exception {
+    private Room createRoom(Long id, boolean isPlaying, Long hostId) throws Exception {
         Room room = Room.builder()
                 .title("테스트 방")
-                .hostId(1L)
+                .hostId(hostId)
                 .totalRounds((short) 3)
                 .maxPlayers((short) 4)
                 .curPlayers((short) 2)

@@ -31,10 +31,10 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public Long signup(CreateUserRequest dto) {
         if (userRepository.existsByEmail(dto.getEmail())) {
-            throw new ServiceException(409, "이미 존재하는 이메일입니다.");
+            throw new ServiceException("409-1", "이미 존재하는 이메일입니다.");
         }
         if (userRepository.existsByNickname(dto.getNickname())) {
-            throw new ServiceException(409, "이미 존재하는 닉네임입니다.");
+            throw new ServiceException("409-2", "이미 존재하는 닉네임입니다.");
         }
 
         User user = User.builder()
@@ -50,10 +50,10 @@ public class AuthServiceImpl implements AuthService {
     public LoginResponse login(LoginRequest dto) {
         User user = userRepository
                 .findByEmail(dto.getEmail())
-                .orElseThrow(() -> new ServiceException(401, "이메일 또는 비밀번호가 올바르지 않습니다."));
+                .orElseThrow(() -> new ServiceException("401-1", "이메일 또는 비밀번호가 올바르지 않습니다."));
 
         if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
-            throw new ServiceException(401, "이메일 또는 비밀번호가 올바르지 않습니다.");
+            throw new ServiceException("401-1", "이메일 또는 비밀번호가 올바르지 않습니다.");
         }
 
         String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
@@ -71,20 +71,20 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public LoginResponse reissue(TokenRequest request) {
         if (!jwtTokenProvider.validateToken(request.getRefreshToken())) {
-            throw new ServiceException(401, "리프레시 토큰이 유효하지 않거나 만료되었습니다.");
+            throw new ServiceException("401-2", "리프레시 토큰이 유효하지 않거나 만료되었습니다.");
         }
 
         Long userId = Long.valueOf(jwtTokenProvider.getSubject(request.getRefreshToken()));
 
         RefreshToken savedToken = refreshTokenRepository
                 .findById(userId)
-                .orElseThrow(() -> new ServiceException(401, "로그아웃되었거나 유효하지 않은 세션입니다."));
+                .orElseThrow(() -> new ServiceException("401-3", "로그아웃되었거나 유효하지 않은 세션입니다."));
 
         if (!savedToken.getTokenValue().equals(request.getRefreshToken())) {
-            throw new ServiceException(401, "토큰 정보가 일치하지 않습니다. 다시 로그인해주세요.");
+            throw new ServiceException("401-4", "토큰 정보가 일치하지 않습니다. 다시 로그인해주세요.");
         }
 
-        User user = userRepository.findById(userId).orElseThrow(() -> new ServiceException(404, "사용자를 찾을 수 없습니다."));
+        User user = userRepository.findById(userId).orElseThrow(() -> new ServiceException("404-1", "사용자를 찾을 수 없습니다."));
 
         String newAccessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
         String newRefreshToken = jwtTokenProvider.createRefreshToken(user.getId());

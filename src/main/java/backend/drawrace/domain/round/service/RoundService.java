@@ -48,14 +48,15 @@ public class RoundService {
      * - 현재 방 참가자 전원을 첫 라운드 참가자로 등록
      */
     @Transactional
-    public RoundStartResponse startGame(Long roomId) {
+    public RoundStartResponse startGame(Long roomId, Long userId) {
         Room room = roomRepository
                 .findById(roomId)
                 .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 방입니다. roomId=" + roomId));
 
         long participantCount = participantRepository.countByRoomId(roomId);
 
-        roundValidator.validateStartGame(room, participantCount, roundRepository.findByRoomIdAndIsActiveTrue(roomId));
+        roundValidator.validateStartGame(
+                room, participantCount, roundRepository.findByRoomIdAndIsActiveTrue(roomId), userId);
 
         String keyword = keywordProvider.getRandomKeyword();
 

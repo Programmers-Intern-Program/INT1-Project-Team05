@@ -21,7 +21,7 @@ public class UserServiceImpl implements UserService {
     public UserInfoResponse getUser(Long userId) {
         User user = userRepository
                 .findById(userId)
-                .orElseThrow(() -> new ServiceException(404, "존재하지 않는 유저입니다. ID: " + userId));
+                .orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 유저입니다. ID: " + userId));
 
         return UserInfoResponse.from(user);
     }

@@ -47,7 +47,7 @@ class RoundGameControllerTest {
                 .startedAt(LocalDateTime.of(2026, 4, 21, 12, 0, 0))
                 .build();
 
-        given(roundService.startGame(roomId)).willReturn(response);
+        given(roundService.startGame(roomId, 1L)).willReturn(response);
 
         mockMvc.perform(post("/api/rooms/{roomId}/start", roomId).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
