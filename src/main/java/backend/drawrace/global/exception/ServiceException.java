@@ -1,14 +1,21 @@
 package backend.drawrace.global.exception;
 
+import backend.drawrace.global.rsdata.RsData;
+
 import lombok.Getter;
 
 @Getter
 public class ServiceException extends RuntimeException {
+    private final String resultCode;
+    private final String msg;
 
-    private final int statusCode;
+    public ServiceException(String resultCode, String msg) {
+        super(resultCode + " : " + msg);
+        this.resultCode = resultCode;
+        this.msg = msg;
+    }
 
-    public ServiceException(int statusCode, String message) {
-        super(message);
-        this.statusCode = statusCode;
+    public RsData<Void> getRsData() {
+        return new RsData<>(resultCode, msg, null);
     }
 }

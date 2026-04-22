@@ -1,34 +1,52 @@
 package backend.drawrace.global.globalexceptionhandler;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import static org.springframework.http.HttpStatus.*;
 
-import org.springframework.http.HttpStatus;
+import java.nio.file.AccessDeniedException;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import backend.drawrace.global.exception.ServiceException;
+import backend.drawrace.global.rsdata.RsData;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    // 비즈니스 예외 처리 (ServiceException)
     @ExceptionHandler(ServiceException.class)
-    public ResponseEntity<Map<String, Object>> handleServiceException(ServiceException e) {
-        return buildResponse(e.getStatusCode(), e.getMessage());
+    public ResponseEntity<RsData<Void>> handle(
+            ServiceException exception, HttpServletRequest request, HttpServletResponse response) {
+        RsData<Void> rsData = exception.getRsData();
+        return ResponseEntity.status(rsData.statusCode()).body(rsData);
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException e) {
-        String message = e.getBindingResult().getAllErrors().get(0).getDefaultMessage();
-        return buildResponse(HttpStatus.BAD_REQUEST.value(), message);
+    // 잘못된 인자 예외 (400)
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<RsData<Void>> handle(IllegalArgumentException exception) {
+        return ResponseEntity.status(BAD_REQUEST).body(new RsData<>("400-1", exception.getMessage()));
     }
 
-    private ResponseEntity<Map<String, Object>> buildResponse(int status, String message) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("status", status);
-        body.put("message", message);
-        return ResponseEntity.status(status).body(body);
+    // 권한 부족 예외 (403)
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<RsData<Void>> handle(AccessDeniedException exception) {
+        return ResponseEntity.status(FORBIDDEN).body(new RsData<>("403-1", "접근 권한이 없습니다."));
+    }
+
+    // 자원 없음 예외 (404)
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<RsData<Void>> handle(NoResourceFoundException exception) {
+        return ResponseEntity.status(NOT_FOUND).body(new RsData<>("404-1", "요청하신 리소스를 찾을 수 없습니다."));
+    }
+
+    // 그 외 예상치 못한 서버 에러 (500)
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<RsData<Void>> handle(Exception exception) {
+        return ResponseEntity.status(INTERNAL_SERVER_ERROR).body(new RsData<>("500-1", "예상치 못한 서버 오류가 발생했습니다."));
     }
 }
