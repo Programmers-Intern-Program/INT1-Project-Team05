@@ -1,11 +1,12 @@
 package backend.drawrace.domain.round.dto;
 
+import java.time.LocalDateTime;
+
 import backend.drawrace.domain.round.entity.Round;
 import backend.drawrace.domain.round.entity.RoundStatus;
+
 import lombok.Builder;
 import lombok.Getter;
-
-import java.time.LocalDateTime;
 
 @Getter
 @Builder

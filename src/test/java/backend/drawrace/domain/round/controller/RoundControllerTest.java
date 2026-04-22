@@ -1,8 +1,11 @@
 package backend.drawrace.domain.round.controller;
 
-import backend.drawrace.domain.round.dto.RoundStartResponse;
-import backend.drawrace.domain.round.entity.RoundStatus;
-import backend.drawrace.domain.round.service.RoundService;
+import static org.mockito.BDDMockito.given;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+import java.time.LocalDateTime;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,12 +15,9 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.LocalDateTime;
-
-import static org.mockito.BDDMockito.given;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import backend.drawrace.domain.round.dto.RoundStartResponse;
+import backend.drawrace.domain.round.entity.RoundStatus;
+import backend.drawrace.domain.round.service.RoundService;
 
 @WebMvcTest(RoundController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -45,8 +45,7 @@ class RoundControllerTest {
 
         given(roundService.startGame(roomId)).willReturn(response);
 
-        mockMvc.perform(post("/api/rooms/{roomId}/start", roomId)
-                        .contentType(MediaType.APPLICATION_JSON))
+        mockMvc.perform(post("/api/rooms/{roomId}/start", roomId).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.roomId").value(1))
                 .andExpect(jsonPath("$.roundId").value(10))

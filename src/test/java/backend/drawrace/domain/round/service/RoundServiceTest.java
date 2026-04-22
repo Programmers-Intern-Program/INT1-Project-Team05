@@ -1,5 +1,21 @@
 package backend.drawrace.domain.round.service;
 
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.BDDMockito.*;
+
+import java.lang.reflect.Field;
+import java.util.Optional;
+
+import jakarta.persistence.EntityNotFoundException;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+
 import backend.drawrace.domain.room.entity.Participant;
 import backend.drawrace.domain.room.entity.Room;
 import backend.drawrace.domain.room.repository.ParticipantRepository;
@@ -11,21 +27,6 @@ import backend.drawrace.domain.round.entity.Round;
 import backend.drawrace.domain.round.entity.RoundStatus;
 import backend.drawrace.domain.round.repository.RoundRepository;
 import backend.drawrace.domain.round.validator.RoundValidator;
-import jakarta.persistence.EntityNotFoundException;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.lang.reflect.Field;
-import java.util.Optional;
-import org.springframework.test.util.ReflectionTestUtils;
-
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.BDDMockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class RoundServiceTest {
@@ -63,19 +64,17 @@ class RoundServiceTest {
         given(roundRepository.findByRoomIdAndIsActiveTrue(roomId)).willReturn(Optional.empty());
         given(keywordProvider.getRandomKeyword()).willReturn("사과");
 
-        given(roundRepository.save(any(Round.class)))
-                .willAnswer(invocation -> {
-                    Round round = invocation.getArgument(0);
-                    setField(round, "id", 10L);
-                    return round;
-                });
+        given(roundRepository.save(any(Round.class))).willAnswer(invocation -> {
+            Round round = invocation.getArgument(0);
+            setField(round, "id", 10L);
+            return round;
+        });
 
         // when
         RoundStartResponse response = roundService.startGame(roomId);
 
         // then
-        then(roundValidator).should()
-                .validateStartGame(eq(room), eq(2L), eq(Optional.empty()));
+        then(roundValidator).should().validateStartGame(eq(room), eq(2L), eq(Optional.empty()));
 
         then(keywordProvider).should().getRandomKeyword();
         then(roundRepository).should().save(any(Round.class));
@@ -326,10 +325,7 @@ class RoundServiceTest {
     }
 
     private Participant createParticipant(Long id, Room room, int roundWinCount) throws Exception {
-        Participant participant = Participant.builder()
-                .room(room)
-                .isHost(false)
-                .build();
+        Participant participant = Participant.builder().room(room).isHost(false).build();
 
         setField(participant, "id", id);
         setField(participant, "roundWinCount", roundWinCount);
