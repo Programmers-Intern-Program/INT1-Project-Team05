@@ -1,12 +1,12 @@
 package backend.drawrace.domain.round.controller;
 
 import static org.mockito.BDDMockito.given;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import backend.drawrace.domain.round.dto.CurrentRoundResponse;
-import backend.drawrace.domain.round.dto.RoundParticipantResponse;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,6 +17,8 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import backend.drawrace.domain.round.dto.CurrentRoundResponse;
+import backend.drawrace.domain.round.dto.RoundParticipantResponse;
 import backend.drawrace.domain.round.dto.RoundStartResponse;
 import backend.drawrace.domain.round.entity.RoundStatus;
 import backend.drawrace.domain.round.service.RoundService;
@@ -47,7 +49,8 @@ class RoundGameControllerTest {
 
         given(roundService.startGame(roomId)).willReturn(response);
 
-        mockMvc.perform(post("/api/rooms/{roomId}/start", roomId).contentType(MediaType.APPLICATION_JSON))
+        mockMvc.perform(post("/api/rooms/{roomId}/start", roomId)
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.roomId").value(1))
                 .andExpect(jsonPath("$.roundId").value(10))
@@ -70,8 +73,7 @@ class RoundGameControllerTest {
                 .status(RoundStatus.IN_PROGRESS)
                 .isTiebreaker(false)
                 .startedAt(LocalDateTime.of(2026, 4, 21, 12, 0, 0))
-                .endedAt(null)
-                .participants(java.util.List.of(
+                .participants(List.of(
                         RoundParticipantResponse.builder()
                                 .participantId(100L)
                                 .roundWinCount(1)
@@ -89,8 +91,7 @@ class RoundGameControllerTest {
 
         given(roundService.getCurrentRound(roomId)).willReturn(response);
 
-        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
-                        .get("/api/rooms/{roomId}/rounds/current", roomId)
+        mockMvc.perform(get("/api/rooms/{roomId}/rounds/current", roomId)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.roomId").value(1))

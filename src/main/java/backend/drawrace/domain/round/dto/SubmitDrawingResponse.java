@@ -9,7 +9,20 @@ public class SubmitDrawingResponse {
 
     private Long roundId;
     private String aiAnswer;
-    private boolean correct;
-    private String keyword;
-    private int roundWinCount;
+    private double score;
+
+    private int submittedCount;
+    private int totalParticipantCount;
+
+    private boolean roundFinished;
+    private boolean gameFinished;
+    private boolean tieBreakerStarted;
+
+    private Long roundWinnerParticipantId;
+
+    private Long nextRoundId;
+    private Integer nextRoundNumber;
+    private boolean nextRoundTieBreaker;
+
+    private Long finalWinnerParticipantId;
 }

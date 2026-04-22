@@ -1,5 +1,7 @@
 package backend.drawrace.domain.round.service;
 
+import backend.drawrace.domain.round.dto.AiInferenceResponse;
+
 public interface AiInferenceService {
-    String infer(String imageData);
+    AiInferenceResponse infer(String imageData, String keyword);
 }

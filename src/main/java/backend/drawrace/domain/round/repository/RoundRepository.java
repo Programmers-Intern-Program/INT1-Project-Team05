@@ -8,6 +8,4 @@ import backend.drawrace.domain.round.entity.Round;
 
 public interface RoundRepository extends JpaRepository<Round, Long> {
     Optional<Round> findByRoomIdAndIsActiveTrue(Long roomId);
-
-    Optional<Round> findTopByRoomIdOrderByRoundNumberDesc(Long roomId);
 }

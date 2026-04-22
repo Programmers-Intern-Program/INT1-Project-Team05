@@ -1,5 +1,6 @@
 package backend.drawrace.domain.round.controller;
 
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,7 +19,8 @@ public class RoundController {
 
     @PostMapping("/{roundId}/submit")
     public ResponseEntity<SubmitDrawingResponse> submitDrawing(
-            @PathVariable Long roundId, @RequestBody SubmitDrawingRequest request) {
+            @PathVariable Long roundId,
+            @Valid @RequestBody SubmitDrawingRequest request){
         return ResponseEntity.ok(roundService.submitDrawing(roundId, request));
     }
 }

@@ -6,6 +6,9 @@ import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import java.lang.reflect.Field;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,8 +17,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import backend.drawrace.domain.round.dto.SubmitDrawingRequest;
 import backend.drawrace.domain.round.dto.SubmitDrawingResponse;
@@ -46,9 +47,17 @@ class RoundControllerTest {
         SubmitDrawingResponse response = SubmitDrawingResponse.builder()
                 .roundId(roundId)
                 .aiAnswer("사과")
-                .correct(true)
-                .keyword("사과")
-                .roundWinCount(1)
+                .score(0.95)
+                .submittedCount(2)
+                .totalParticipantCount(2)
+                .roundFinished(true)
+                .gameFinished(false)
+                .tieBreakerStarted(false)
+                .roundWinnerParticipantId(100L)
+                .nextRoundId(20L)
+                .nextRoundNumber(2)
+                .nextRoundTieBreaker(false)
+                .finalWinnerParticipantId(null)
                 .build();
 
         given(roundService.submitDrawing(eq(roundId), any(SubmitDrawingRequest.class)))
@@ -60,13 +69,20 @@ class RoundControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.roundId").value(10))
                 .andExpect(jsonPath("$.aiAnswer").value("사과"))
-                .andExpect(jsonPath("$.correct").value(true))
-                .andExpect(jsonPath("$.keyword").value("사과"))
-                .andExpect(jsonPath("$.roundWinCount").value(1));
+                .andExpect(jsonPath("$.score").value(0.95))
+                .andExpect(jsonPath("$.submittedCount").value(2))
+                .andExpect(jsonPath("$.totalParticipantCount").value(2))
+                .andExpect(jsonPath("$.roundFinished").value(true))
+                .andExpect(jsonPath("$.gameFinished").value(false))
+                .andExpect(jsonPath("$.tieBreakerStarted").value(false))
+                .andExpect(jsonPath("$.roundWinnerParticipantId").value(100))
+                .andExpect(jsonPath("$.nextRoundId").value(20))
+                .andExpect(jsonPath("$.nextRoundNumber").value(2))
+                .andExpect(jsonPath("$.nextRoundTieBreaker").value(false));
     }
 
     private void setField(Object target, String fieldName, Object value) throws Exception {
-        java.lang.reflect.Field field = target.getClass().getDeclaredField(fieldName);
+        Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.set(target, value);
     }
