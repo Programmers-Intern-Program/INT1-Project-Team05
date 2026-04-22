@@ -16,7 +16,7 @@ class RoundValidatorTest {
     private final RoundValidator roundValidator = new RoundValidator();
 
     @Test
-    @DisplayName("게임 시작 검증 성공")
+    @DisplayName("게임 시작 검증 성공 ")
     void validateStartGame_success() throws Exception {
         Room room = createRoom(1L, false);
 
