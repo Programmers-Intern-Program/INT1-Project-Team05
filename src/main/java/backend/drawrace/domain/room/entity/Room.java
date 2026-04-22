@@ -24,7 +24,7 @@ public class Room extends BaseEntity {
     @Column(nullable = false)
     private String title;
 
-    //    private String password;
+    private String password;
 
     @Column(name = "host_id", nullable = false)
     private Long hostId;
@@ -46,6 +46,20 @@ public class Room extends BaseEntity {
     @OneToMany(mappedBy = "room", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Participant> participants = new ArrayList<>();
+
+    public void addParticipant(Participant participant) {
+        this.participants.add(participant);
+        this.curPlayers++;
+    }
+
+    public void removeParticipant(Participant participant) {
+        this.participants.remove(participant);
+        this.curPlayers--;
+    }
+
+    public void changeHost(Long newHostId) {
+        this.hostId = newHostId;
+    }
 
     public void startGame() {
         this.isPlaying = true;

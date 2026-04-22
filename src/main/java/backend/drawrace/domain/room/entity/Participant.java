@@ -45,4 +45,8 @@ public class Participant extends BaseEntity {
     public void markWinner() {
         this.isWinner = true;
     }
+
+    public void makeHost() {
+        this.isHost = true;
+    }
 }
