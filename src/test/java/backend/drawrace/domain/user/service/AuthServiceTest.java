@@ -2,9 +2,11 @@ package backend.drawrace.domain.user.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
-import static org.mockito.ArgumentMatchers.any;
+
+import java.util.Optional;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -22,8 +24,6 @@ import backend.drawrace.domain.user.entity.RefreshToken;
 import backend.drawrace.domain.user.repository.RefreshTokenRepository;
 import backend.drawrace.global.exception.ServiceException;
 
-import java.util.Optional;
-
 @SpringBootTest
 @Transactional
 class AuthServiceTest {
@@ -32,7 +32,7 @@ class AuthServiceTest {
     AuthService authService;
 
     @MockBean
-    //@Autowired
+    // @Autowired
     RefreshTokenRepository refreshTokenRepository;
 
     @AfterEach
@@ -108,7 +108,7 @@ class AuthServiceTest {
 
         assertThat(response.getAccessToken()).isNotBlank();
         assertThat(response.getRefreshToken()).isNotBlank();
-        //assertThat(refreshTokenRepository.findById(userId)).isPresent();
+        // assertThat(refreshTokenRepository.findById(userId)).isPresent();
         verify(refreshTokenRepository).save(any(RefreshToken.class));
     }
 
@@ -150,13 +150,13 @@ class AuthServiceTest {
         assertThat(reissueResponse.getRefreshToken()).isNotBlank();
         // 토큰 로테이션 검증 — Redis에 새 Refresh Token이 저장돼야 함
 
-/*        String storedToken = refreshTokenRepository
-                .findById(userId)
-                .map(RefreshToken::getTokenValue)
-                .orElseThrow();
-        assertThat(storedToken).isEqualTo(reissueResponse.getRefreshToken());
+        /*        String storedToken = refreshTokenRepository
+                       .findById(userId)
+                       .map(RefreshToken::getTokenValue)
+                       .orElseThrow();
+               assertThat(storedToken).isEqualTo(reissueResponse.getRefreshToken());
 
- */
+        */
         verify(refreshTokenRepository).save(any(RefreshToken.class));
     }
 
@@ -175,7 +175,7 @@ class AuthServiceTest {
         LoginResponse firstLogin = authService.login(new LoginRequest("test@example.com", "password123"));
 
         // 재로그인으로 Redis 토큰이 교체된 상황 시뮬레이션
-//        refreshTokenRepository.save(new RefreshToken(userId, "replaced_after_relogin"));
+        //        refreshTokenRepository.save(new RefreshToken(userId, "replaced_after_relogin"));
 
         // Mock 설정
         given(refreshTokenRepository.findById(userId))
