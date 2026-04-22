@@ -1,7 +1,5 @@
 package backend.drawrace.domain.user.service;
 
-import backend.drawrace.domain.user.dto.CreateUserRequest;
-import backend.drawrace.domain.user.dto.LoginRequest;
 import backend.drawrace.domain.user.dto.UserInfoResponse;
 
 public interface UserService {

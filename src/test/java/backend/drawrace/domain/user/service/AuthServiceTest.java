@@ -1,0 +1,191 @@
+package backend.drawrace.domain.user.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
+
+import backend.drawrace.domain.user.dto.CreateUserRequest;
+import backend.drawrace.domain.user.dto.LoginRequest;
+import backend.drawrace.domain.user.dto.LoginResponse;
+import backend.drawrace.domain.user.dto.TokenRequest;
+import backend.drawrace.domain.user.entity.RefreshToken;
+import backend.drawrace.domain.user.repository.RefreshTokenRepository;
+import backend.drawrace.global.exception.ServiceException;
+
+@SpringBootTest
+@Transactional
+class AuthServiceTest {
+
+    @Autowired
+    AuthService authService;
+
+    @Autowired
+    RefreshTokenRepository refreshTokenRepository;
+
+    @AfterEach
+    void tearDown() {
+        // @Transactional이 JPA는 롤백하지만 Redis는 롤백하지 않으므로 직접 정리
+        refreshTokenRepository.deleteAll();
+    }
+
+    private Long createTestUser() {
+        return authService.signup(CreateUserRequest.builder()
+                .email("test@example.com")
+                .password("password123")
+                .nickname("테스터")
+                .build());
+    }
+
+    // ===== 회원가입 =====
+
+    @Test
+    @DisplayName("회원가입_성공")
+    void signup_success() {
+        CreateUserRequest request = CreateUserRequest.builder()
+                .email("new@example.com")
+                .password("password123")
+                .nickname("신규유저")
+                .build();
+
+        Long savedId = authService.signup(request);
+
+        assertThat(savedId).isNotNull();
+    }
+
+    @Test
+    @DisplayName("회원가입_실패_이메일_중복")
+    void signup_fail_duplicate_email() {
+        createTestUser();
+
+        CreateUserRequest request = CreateUserRequest.builder()
+                .email("test@example.com")
+                .password("password456")
+                .nickname("다른닉네임")
+                .build();
+
+        assertThatThrownBy(() -> authService.signup(request))
+                .isInstanceOf(ServiceException.class)
+                .hasFieldOrPropertyWithValue("statusCode", 409);
+    }
+
+    @Test
+    @DisplayName("회원가입_실패_닉네임_중복")
+    void signup_fail_duplicate_nickname() {
+        createTestUser();
+
+        CreateUserRequest request = CreateUserRequest.builder()
+                .email("other@example.com")
+                .password("password456")
+                .nickname("테스터")
+                .build();
+
+        assertThatThrownBy(() -> authService.signup(request))
+                .isInstanceOf(ServiceException.class)
+                .hasFieldOrPropertyWithValue("statusCode", 409);
+    }
+
+    // ===== 로그인 =====
+
+    @Test
+    @DisplayName("로그인_성공_토큰_발급_및_Redis_저장")
+    void login_success() {
+        Long userId = createTestUser();
+
+        LoginResponse response = authService.login(new LoginRequest("test@example.com", "password123"));
+
+        assertThat(response.getAccessToken()).isNotBlank();
+        assertThat(response.getRefreshToken()).isNotBlank();
+        assertThat(refreshTokenRepository.findById(userId)).isPresent();
+    }
+
+    @Test
+    @DisplayName("로그인_실패_존재하지_않는_이메일")
+    void login_fail_email_not_found() {
+        assertThatThrownBy(() -> authService.login(new LoginRequest("none@example.com", "password123")))
+                .isInstanceOf(ServiceException.class)
+                .hasFieldOrPropertyWithValue("statusCode", 401);
+    }
+
+    @Test
+    @DisplayName("로그인_실패_비밀번호_불일치")
+    void login_fail_wrong_password() {
+        createTestUser();
+
+        assertThatThrownBy(() -> authService.login(new LoginRequest("test@example.com", "wrongpassword")))
+                .isInstanceOf(ServiceException.class)
+                .hasFieldOrPropertyWithValue("statusCode", 401);
+    }
+
+    // ===== 토큰 재발급 =====
+
+    @Test
+    @DisplayName("토큰_재발급_성공_새_토큰_발급_및_Redis_갱신")
+    void reissue_success() {
+        Long userId = createTestUser();
+        LoginResponse loginResponse = authService.login(new LoginRequest("test@example.com", "password123"));
+
+        LoginResponse reissueResponse = authService.reissue(new TokenRequest(loginResponse.getRefreshToken()));
+
+        assertThat(reissueResponse.getAccessToken()).isNotBlank();
+        assertThat(reissueResponse.getRefreshToken()).isNotBlank();
+        // 토큰 로테이션 검증 — Redis에 새 Refresh Token이 저장돼야 함
+        String storedToken = refreshTokenRepository
+                .findById(userId)
+                .map(RefreshToken::getTokenValue)
+                .orElseThrow();
+        assertThat(storedToken).isEqualTo(reissueResponse.getRefreshToken());
+    }
+
+    @Test
+    @DisplayName("토큰_재발급_실패_유효하지_않은_토큰")
+    void reissue_fail_invalid_token() {
+        assertThatThrownBy(() -> authService.reissue(new TokenRequest("invalid.token.value")))
+                .isInstanceOf(ServiceException.class)
+                .hasFieldOrPropertyWithValue("statusCode", 401);
+    }
+
+    @Test
+    @DisplayName("토큰_재발급_실패_재로그인_후_이전_토큰_사용")
+    void reissue_fail_token_mismatch() {
+        Long userId = createTestUser();
+        LoginResponse firstLogin = authService.login(new LoginRequest("test@example.com", "password123"));
+
+        // 재로그인으로 Redis 토큰이 교체된 상황 시뮬레이션
+        refreshTokenRepository.save(new RefreshToken(userId, "replaced_after_relogin"));
+
+        assertThatThrownBy(() -> authService.reissue(new TokenRequest(firstLogin.getRefreshToken())))
+                .isInstanceOf(ServiceException.class)
+                .hasFieldOrPropertyWithValue("statusCode", 401);
+    }
+
+    @Test
+    @DisplayName("토큰_재발급_실패_로그아웃_후_토큰_사용")
+    void reissue_fail_after_logout() {
+        Long userId = createTestUser();
+        LoginResponse loginResponse = authService.login(new LoginRequest("test@example.com", "password123"));
+        authService.logout(userId);
+
+        assertThatThrownBy(() -> authService.reissue(new TokenRequest(loginResponse.getRefreshToken())))
+                .isInstanceOf(ServiceException.class)
+                .hasFieldOrPropertyWithValue("statusCode", 401);
+    }
+
+    // ===== 로그아웃 =====
+
+    @Test
+    @DisplayName("로그아웃_성공_Redis_토큰_삭제")
+    void logout_success() {
+        Long userId = createTestUser();
+        authService.login(new LoginRequest("test@example.com", "password123"));
+
+        authService.logout(userId);
+
+        assertThat(refreshTokenRepository.findById(userId)).isEmpty();
+    }
+}

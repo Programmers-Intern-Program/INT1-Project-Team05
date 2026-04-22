@@ -1,24 +1,24 @@
 package backend.drawrace.global.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
+
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-@Component
+import lombok.RequiredArgsConstructor;
+
 @RequiredArgsConstructor
 public class CustomAuthenticationFilter extends OncePerRequestFilter {
 
@@ -31,6 +31,7 @@ public class CustomAuthenticationFilter extends OncePerRequestFilter {
 
         return uri.equals("/api/auth/login")
                 || uri.equals("/api/auth/signup")
+                || uri.equals("/api/auth/reissue")
                 || uri.startsWith("/v3/api-docs")
                 || uri.startsWith("/swagger-ui")
                 || uri.startsWith("/h2-console");
@@ -45,10 +46,12 @@ public class CustomAuthenticationFilter extends OncePerRequestFilter {
 
             // 토큰이 존재하고 유효한 경우만 인증 처리
             if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
-                String email = jwtTokenProvider.getEmail(token);
+                Long userId = jwtTokenProvider.getUserId(token);
+                String email = jwtTokenProvider.getSubject(token);
 
-                // 인증 객체 생성 (비밀번호는 null, 권한은 빈 리스트로 우선 설정)
-                Authentication auth = new UsernamePasswordAuthenticationToken(email, null, Collections.emptyList());
+                SecurityUser securityUser = new SecurityUser(userId, email);
+                Authentication auth =
+                        new UsernamePasswordAuthenticationToken(securityUser, null, securityUser.getAuthorities());
                 SecurityContextHolder.getContext().setAuthentication(auth);
             }
 

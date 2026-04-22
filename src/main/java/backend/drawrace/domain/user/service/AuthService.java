@@ -2,8 +2,10 @@ package backend.drawrace.domain.user.service;
 
 import backend.drawrace.domain.user.dto.CreateUserRequest;
 import backend.drawrace.domain.user.dto.LoginRequest;
+import backend.drawrace.domain.user.dto.LoginResponse;
+import backend.drawrace.domain.user.dto.TokenRequest;
 
-public interface AuthService{
+public interface AuthService {
 
     /**
      * 회원가입 (유저 생성)
@@ -17,5 +19,9 @@ public interface AuthService{
      * @param dto 로그인 정보 (email, password)
      * @return 생성된 유저의 토큰
      */
-    public String login(LoginRequest dto);
+    LoginResponse login(LoginRequest dto);
+
+    LoginResponse reissue(TokenRequest request);
+
+    void logout(Long userId);
 }
