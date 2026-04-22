@@ -46,4 +46,12 @@ public class Room extends BaseEntity {
     @OneToMany(mappedBy = "room", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Participant> participants = new ArrayList<>();
+
+    public void startGame() {
+        this.isPlaying = true;
+    }
+
+    public void finishGame() {
+        this.isPlaying = false;
+    }
 }
