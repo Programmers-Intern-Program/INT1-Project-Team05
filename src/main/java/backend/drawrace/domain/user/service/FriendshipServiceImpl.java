@@ -33,10 +33,9 @@ public class FriendshipServiceImpl implements FriendshipService {
         User requester = userService.findById(requesterId);
         User receiver = userService.findById(receiverId);
 
-        friendshipRepository.findByRequesterAndReceiver(requester, receiver)
-                .ifPresent(f -> {
-                    throw new ServiceException("409-1", "이미 처리 중이거나 완료된 친구 요청이 있습니다.");
-                });
+        friendshipRepository.findByRequesterAndReceiver(requester, receiver).ifPresent(f -> {
+            throw new ServiceException("409-1", "이미 처리 중이거나 완료된 친구 요청이 있습니다.");
+        });
 
         friendshipRepository.save(Friendship.builder()
                 .requester(requester)
@@ -48,7 +47,8 @@ public class FriendshipServiceImpl implements FriendshipService {
     @Override
     @Transactional
     public void acceptFriendRequest(Long receiverId, Long friendshipId) {
-        Friendship friendship = friendshipRepository.findById(friendshipId)
+        Friendship friendship = friendshipRepository
+                .findById(friendshipId)
                 .orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 친구 요청입니다."));
 
         if (!friendship.getReceiver().getId().equals(receiverId)) {
@@ -65,7 +65,8 @@ public class FriendshipServiceImpl implements FriendshipService {
     @Override
     @Transactional
     public void rejectFriendRequest(Long receiverId, Long friendshipId) {
-        Friendship friendship = friendshipRepository.findById(friendshipId)
+        Friendship friendship = friendshipRepository
+                .findById(friendshipId)
                 .orElseThrow(() -> new ServiceException("404-2", "존재하지 않는 친구 요청입니다."));
 
         if (!friendship.getReceiver().getId().equals(receiverId)) {
@@ -79,8 +80,7 @@ public class FriendshipServiceImpl implements FriendshipService {
     @Transactional(readOnly = true)
     public List<FriendRequestResponse> getReceivedRequests(Long receiverId) {
         User receiver = userService.findById(receiverId);
-        return friendshipRepository.findAllByReceiverAndStatus(receiver, FriendshipStatus.PENDING)
-                .stream()
+        return friendshipRepository.findAllByReceiverAndStatus(receiver, FriendshipStatus.PENDING).stream()
                 .map(f -> FriendRequestResponse.from(f, f.getRequester()))
                 .toList();
     }
@@ -89,8 +89,7 @@ public class FriendshipServiceImpl implements FriendshipService {
     @Transactional(readOnly = true)
     public List<FriendRequestResponse> getSentRequests(Long requesterId) {
         User requester = userService.findById(requesterId);
-        return friendshipRepository.findAllByRequesterAndStatus(requester, FriendshipStatus.PENDING)
-                .stream()
+        return friendshipRepository.findAllByRequesterAndStatus(requester, FriendshipStatus.PENDING).stream()
                 .map(f -> FriendRequestResponse.from(f, f.getReceiver()))
                 .toList();
     }
@@ -101,9 +100,7 @@ public class FriendshipServiceImpl implements FriendshipService {
         User user = userService.findById(userId);
         return friendshipRepository.findAllFriends(user).stream()
                 .map(f -> {
-                    User friend = f.getRequester().getId().equals(userId)
-                            ? f.getReceiver()
-                            : f.getRequester();
+                    User friend = f.getRequester().getId().equals(userId) ? f.getReceiver() : f.getRequester();
                     return FriendInfoResponse.from(friend);
                 })
                 .toList();

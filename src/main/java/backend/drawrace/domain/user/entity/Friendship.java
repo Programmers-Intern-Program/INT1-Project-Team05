@@ -1,7 +1,9 @@
 package backend.drawrace.domain.user.entity;
 
-import backend.drawrace.global.entity.BaseEntity;
 import jakarta.persistence.*;
+
+import backend.drawrace.global.entity.BaseEntity;
+
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -9,10 +11,9 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@Table(name = "friendship",
-        uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"requester_id", "receiver_id"})
-        })
+@Table(
+        name = "friendship",
+        uniqueConstraints = {@UniqueConstraint(columnNames = {"requester_id", "receiver_id"})})
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Friendship extends BaseEntity {
 
@@ -27,7 +28,7 @@ public class Friendship extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "receiver_id", nullable = false)
-    private User receiver;  // 친구 요청을 받은 사람
+    private User receiver; // 친구 요청을 받은 사람
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
