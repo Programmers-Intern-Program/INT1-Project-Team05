@@ -36,6 +36,7 @@ import backend.drawrace.domain.round.repository.RoundRepository;
 import backend.drawrace.domain.round.repository.RoundSubmissionRepository;
 import backend.drawrace.domain.round.validator.RoundValidator;
 import backend.drawrace.domain.user.entity.User;
+import backend.drawrace.domain.user.entity.UserStats;
 
 @ExtendWith(MockitoExtension.class)
 class RoundServiceTest {
@@ -255,6 +256,11 @@ class RoundServiceTest {
         assertThat(participant.getRoundWinCount()).isEqualTo(2);
         assertThat(participant.isWinner()).isTrue();
         assertThat(room.isPlaying()).isFalse();
+
+        then(participant.getUserId().getStats()).should().recordGame();
+        then(participant.getUserId().getStats()).should().recordWin();
+        then(participant2.getUserId().getStats()).should().recordGame();
+        then(participant2.getUserId().getStats()).shouldHaveNoMoreInteractions();
     }
 
     @Test
@@ -341,6 +347,7 @@ class RoundServiceTest {
         given(roundSubmissionRepository.countByRoundId(roundId)).willReturn(2L);
         given(roundParticipantRepository.countByRoundId(roundId)).willReturn(2L);
         given(roundSubmissionRepository.findByRoundId(roundId)).willReturn(List.of(currentSubmission, otherSubmission));
+        given(participantRepository.findByRoomId(roomId)).willReturn(List.of(participant, participant2));
 
         SubmitDrawingResponse response = roundService.submitDrawing(roundId, request);
 
@@ -353,6 +360,11 @@ class RoundServiceTest {
         assertThat(participant.getRoundWinCount()).isEqualTo(3);
         assertThat(participant.isWinner()).isTrue();
         assertThat(room.isPlaying()).isFalse();
+
+        then(participant.getUserId().getStats()).should().recordGame();
+        then(participant.getUserId().getStats()).should().recordWin();
+        then(participant2.getUserId().getStats()).should().recordGame();
+        then(participant2.getUserId().getStats()).shouldHaveNoMoreInteractions();
     }
 
     @Test
@@ -462,6 +474,8 @@ class RoundServiceTest {
 
     private Participant createParticipant(Long id, Room room, int roundWinCount) throws Exception {
         User user = mock(User.class);
+        UserStats stats = mock(UserStats.class);
+        lenient().when(user.getStats()).thenReturn(stats);
 
         Participant participant =
                 Participant.builder().userId(user).room(room).isHost(false).build();

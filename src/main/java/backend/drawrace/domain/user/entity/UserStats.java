@@ -32,4 +32,12 @@ public class UserStats extends BaseEntity {
         this.totalGameCount = totalGameCount;
         this.winGameCount = winGameCount;
     }
+
+    public void recordGame() {
+        this.totalGameCount++;
+    }
+
+    public void recordWin() {
+        this.winGameCount++;
+    }
 }
