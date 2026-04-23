@@ -38,7 +38,7 @@ public class Friendship extends BaseEntity {
     public Friendship(User requester, User receiver, FriendshipStatus status) {
         this.requester = requester;
         this.receiver = receiver;
-        this.status = (status != null) ? status : FriendshipStatus.PENDING;
+        this.status = status;
     }
 
     public void updateStatus(FriendshipStatus status) {

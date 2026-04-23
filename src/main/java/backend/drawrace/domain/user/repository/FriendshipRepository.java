@@ -13,13 +13,17 @@ import backend.drawrace.domain.user.entity.User;
 
 public interface FriendshipRepository extends JpaRepository<Friendship, Long> {
 
-    Optional<Friendship> findByRequesterAndReceiver(User requester, User receiver);
+    @Query(
+            "SELECT f FROM Friendship f WHERE (f.requester = :a AND f.receiver = :b) OR (f.requester = :b AND f.receiver = :a)")
+    Optional<Friendship> findByUsers(@Param("a") User a, @Param("b") User b);
 
-    // 내가 받은 요청
-    List<Friendship> findAllByReceiverAndStatus(User receiver, FriendshipStatus status);
+    @Query("SELECT f FROM Friendship f JOIN FETCH f.requester WHERE f.receiver = :receiver AND f.status = :status")
+    List<Friendship> findAllByReceiverAndStatus(
+            @Param("receiver") User receiver, @Param("status") FriendshipStatus status);
 
-    // 내가 보낸 요청
-    List<Friendship> findAllByRequesterAndStatus(User requester, FriendshipStatus status);
+    @Query("SELECT f FROM Friendship f JOIN FETCH f.receiver WHERE f.requester = :requester AND f.status = :status")
+    List<Friendship> findAllByRequesterAndStatus(
+            @Param("requester") User requester, @Param("status") FriendshipStatus status);
 
     @Query("SELECT f FROM Friendship f " + "JOIN FETCH f.requester "
             + "JOIN FETCH f.receiver "

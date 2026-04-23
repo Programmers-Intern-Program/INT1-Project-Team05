@@ -33,7 +33,7 @@ public class FriendshipServiceImpl implements FriendshipService {
         User requester = userService.findById(requesterId);
         User receiver = userService.findById(receiverId);
 
-        friendshipRepository.findByRequesterAndReceiver(requester, receiver).ifPresent(f -> {
+        friendshipRepository.findByUsers(requester, receiver).ifPresent(f -> {
             throw new ServiceException("409-1", "이미 처리 중이거나 완료된 친구 요청이 있습니다.");
         });
 
@@ -71,6 +71,27 @@ public class FriendshipServiceImpl implements FriendshipService {
 
         if (!friendship.getReceiver().getId().equals(receiverId)) {
             throw new ServiceException("403-2", "본인에게 온 요청만 거절할 수 있습니다.");
+        }
+
+        if (friendship.getStatus() != FriendshipStatus.PENDING) {
+            throw new ServiceException("409-4", "대기 중인 요청만 거절할 수 있습니다.");
+        }
+
+        friendshipRepository.delete(friendship);
+    }
+
+    @Override
+    @Transactional
+    public void deleteFriend(Long userId, Long friendId) {
+        User user = userService.findById(userId);
+        User friend = userService.findById(friendId);
+
+        Friendship friendship = friendshipRepository
+                .findByUsers(user, friend)
+                .orElseThrow(() -> new ServiceException("404-3", "친구 관계가 존재하지 않습니다."));
+
+        if (friendship.getStatus() != FriendshipStatus.ACCEPTED) {
+            throw new ServiceException("409-3", "수락된 친구 관계가 아닙니다.");
         }
 
         friendshipRepository.delete(friendship);

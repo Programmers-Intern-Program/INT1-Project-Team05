@@ -68,6 +68,16 @@ class FriendshipServiceTest {
                 .hasFieldOrPropertyWithValue("resultCode", "409-1");
     }
 
+    @Test
+    @DisplayName("친구_요청_보내기_실패_역방향_중복_요청")
+    void sendFriendRequest_fail_reverse_duplicate() {
+        friendshipService.sendFriendRequest(userAId, userBId);
+
+        assertThatThrownBy(() -> friendshipService.sendFriendRequest(userBId, userAId))
+                .isInstanceOf(ServiceException.class)
+                .hasFieldOrPropertyWithValue("resultCode", "409-1");
+    }
+
     // ===== 친구 요청 수락 =====
 
     @Test
@@ -132,6 +142,19 @@ class FriendshipServiceTest {
     }
 
     @Test
+    @DisplayName("친구_요청_거절_실패_이미_수락된_요청")
+    void rejectFriendRequest_fail_already_accepted() {
+        friendshipService.sendFriendRequest(userAId, userBId);
+        Long friendshipId =
+                friendshipService.getReceivedRequests(userBId).get(0).friendshipId();
+        friendshipService.acceptFriendRequest(userBId, friendshipId);
+
+        assertThatThrownBy(() -> friendshipService.rejectFriendRequest(userBId, friendshipId))
+                .isInstanceOf(ServiceException.class)
+                .hasFieldOrPropertyWithValue("resultCode", "409-4");
+    }
+
+    @Test
     @DisplayName("친구_요청_거절_실패_권한_없음")
     void rejectFriendRequest_fail_forbidden() {
         friendshipService.sendFriendRequest(userAId, userBId);
@@ -141,6 +164,40 @@ class FriendshipServiceTest {
         assertThatThrownBy(() -> friendshipService.rejectFriendRequest(userCId, friendshipId))
                 .isInstanceOf(ServiceException.class)
                 .hasFieldOrPropertyWithValue("resultCode", "403-2");
+    }
+
+    // ===== 친구 삭제 =====
+
+    @Test
+    @DisplayName("친구_삭제_성공")
+    void deleteFriend_success() {
+        friendshipService.sendFriendRequest(userAId, userBId);
+        Long friendshipId =
+                friendshipService.getReceivedRequests(userBId).get(0).friendshipId();
+        friendshipService.acceptFriendRequest(userBId, friendshipId);
+
+        friendshipService.deleteFriend(userAId, userBId);
+
+        assertThat(friendshipService.getFriendList(userAId)).isEmpty();
+        assertThat(friendshipService.getFriendList(userBId)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("친구_삭제_실패_친구_관계_없음")
+    void deleteFriend_fail_not_found() {
+        assertThatThrownBy(() -> friendshipService.deleteFriend(userAId, userBId))
+                .isInstanceOf(ServiceException.class)
+                .hasFieldOrPropertyWithValue("resultCode", "404-3");
+    }
+
+    @Test
+    @DisplayName("친구_삭제_실패_수락되지_않은_관계")
+    void deleteFriend_fail_not_accepted() {
+        friendshipService.sendFriendRequest(userAId, userBId);
+
+        assertThatThrownBy(() -> friendshipService.deleteFriend(userAId, userBId))
+                .isInstanceOf(ServiceException.class)
+                .hasFieldOrPropertyWithValue("resultCode", "409-3");
     }
 
     // ===== 조회 =====

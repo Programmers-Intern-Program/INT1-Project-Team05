@@ -46,6 +46,12 @@ public class FriendshipController {
         return new RsData<>("200-2", "친구 요청을 거절했습니다.");
     }
 
+    @DeleteMapping("/friends/{friendId}")
+    public RsData<Void> deleteFriend(@AuthenticationPrincipal SecurityUser securityUser, @PathVariable Long friendId) {
+        friendshipService.deleteFriend(securityUser.getUserId(), friendId);
+        return new RsData<>("200-6", "친구를 삭제했습니다.");
+    }
+
     @GetMapping("/requests/received")
     public RsData<List<FriendRequestResponse>> getReceivedRequests(@AuthenticationPrincipal SecurityUser securityUser) {
         List<FriendRequestResponse> requests = friendshipService.getReceivedRequests(securityUser.getUserId());

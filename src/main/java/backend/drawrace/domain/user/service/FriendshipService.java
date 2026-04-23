@@ -43,6 +43,13 @@ public interface FriendshipService {
     List<FriendRequestResponse> getSentRequests(Long requesterId);
 
     /**
+     * 친구 삭제
+     * @param userId 요청자 ID
+     * @param friendId 삭제할 친구 ID
+     */
+    void deleteFriend(Long userId, Long friendId);
+
+    /**
      * 친구 목록 조회
      * @param userId 유저 ID
      * @return 친구 정보 목록
