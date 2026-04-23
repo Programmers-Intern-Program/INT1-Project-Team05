@@ -2,6 +2,7 @@ package backend.drawrace.domain.round.service;
 
 import java.util.List;
 
+import backend.drawrace.domain.room.service.RoomService;
 import jakarta.persistence.EntityNotFoundException;
 
 import org.springframework.stereotype.Service;
@@ -40,6 +41,7 @@ public class RoundService {
     private final KeywordProvider keywordProvider;
     private final RoundValidator roundValidator;
     private final AiInferenceService aiInferenceService;
+    private final RoomService roomService;
 
     /**
      * 게임 시작 처리
@@ -197,8 +199,9 @@ public class RoundService {
         // 결승 라운드면 바로 최종 우승
         if (round.isTiebreaker()) {
             roundWinner.markWinner();
-            room.finishGame();
-            recordGameResults(room, roundWinner);
+           //room.finishGame();
+           //recordGameResults(room, roundWinner);
+            roomService.finishGame(room.getId());
 
             return SubmitDrawingResponse.builder()
                     .roundId(round.getId())
@@ -258,9 +261,10 @@ public class RoundService {
         // 단독 우승
         if (topScorers.size() == 1) {
             Participant finalWinner = topScorers.get(0);
-            finalWinner.markWinner();
-            room.finishGame();
-            recordGameResults(room, finalWinner);
+            //finalWinner.markWinner();
+            //room.finishGame();
+            //recordGameResults(room, finalWinner);
+            roomService.finishGame(room.getId());
 
             return SubmitDrawingResponse.builder()
                     .roundId(round.getId())
@@ -333,9 +337,11 @@ public class RoundService {
         return roundRepository.save(tieBreakerRound);
     }
 
+
     /**
      * 게임 종료 시 전원 totalGameCount +1, 최종 우승자 winGameCount +1
      */
+    /*
     private void recordGameResults(Room room, Participant winner) {
         List<Participant> participants = participantRepository.findByRoomId(room.getId());
 
@@ -343,7 +349,7 @@ public class RoundService {
 
         winner.getUserId().getStats().recordWin();
     }
-
+     */
     /**
      * 현재 방에서 최고 점수자 목록 조회
      * - 최종 우승 판정
