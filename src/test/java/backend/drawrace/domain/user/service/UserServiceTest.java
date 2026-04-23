@@ -48,6 +48,6 @@ class UserServiceTest {
     void getUser_fail_not_found() {
         assertThatThrownBy(() -> userService.getUser(999L))
                 .isInstanceOf(ServiceException.class)
-                .hasFieldOrPropertyWithValue("statusCode", 404);
+                .hasFieldOrPropertyWithValue("resultCode", "404-1");
     }
 }

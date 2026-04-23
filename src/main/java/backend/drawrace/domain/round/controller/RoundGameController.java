@@ -18,7 +18,7 @@ public class RoundGameController {
 
     @PostMapping("/{roomId}/start")
     public ResponseEntity<RoundStartResponse> startGame(@PathVariable Long roomId) {
-        return ResponseEntity.ok(roundService.startGame(roomId));
+        return ResponseEntity.ok(roundService.startGame(roomId, 1L));
     }
 
     @GetMapping("/{roomId}/rounds/current")

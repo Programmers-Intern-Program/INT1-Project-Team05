@@ -18,18 +18,29 @@ class RoundValidatorTest {
     @Test
     @DisplayName("게임 시작 검증 성공 ")
     void validateStartGame_success() throws Exception {
-        Room room = createRoom(1L, false);
+        Room room = createRoom(1L, false, 1L);
 
-        assertThatCode(() -> roundValidator.validateStartGame(room, 2L, Optional.empty()))
+        assertThatCode(() -> roundValidator.validateStartGame(room, 2L, Optional.empty(), 1L))
                 .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("방장이 아닌 유저가 게임 시작을 요청하면 예외 발생")
+    void validateStartGame_notHost() throws Exception {
+        Room room = createRoom(1L, false, 1L); // hostId = 1L
+
+        // userId가 2L이면 예외 발생
+        assertThatThrownBy(() -> roundValidator.validateStartGame(room, 2L, Optional.empty(), 2L))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("방장만 게임을 시작할 수 있습니다");
     }
 
     @Test
     @DisplayName("이미 게임 중인 방이면 예외")
     void validateStartGame_roomAlreadyPlaying() throws Exception {
-        Room room = createRoom(1L, true);
+        Room room = createRoom(1L, true, 1L);
 
-        assertThatThrownBy(() -> roundValidator.validateStartGame(room, 2L, Optional.empty()))
+        assertThatThrownBy(() -> roundValidator.validateStartGame(room, 2L, Optional.empty(), 1L))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("이미 게임이 진행 중");
     }
@@ -37,9 +48,9 @@ class RoundValidatorTest {
     @Test
     @DisplayName("참가자 수 부족이면 예외")
     void validateStartGame_notEnoughParticipants() throws Exception {
-        Room room = createRoom(1L, false);
+        Room room = createRoom(1L, false, 1L);
 
-        assertThatThrownBy(() -> roundValidator.validateStartGame(room, 1L, Optional.empty()))
+        assertThatThrownBy(() -> roundValidator.validateStartGame(room, 1L, Optional.empty(), 1L))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("최소 2명");
     }
@@ -47,19 +58,19 @@ class RoundValidatorTest {
     @Test
     @DisplayName("활성 라운드가 있으면 예외")
     void validateStartGame_activeRoundExists() throws Exception {
-        Room room = createRoom(1L, false);
+        Room room = createRoom(1L, false, 1L);
         Round round = Round.create(room, 1, "사과");
         setField(round, "id", 99L);
 
-        assertThatThrownBy(() -> roundValidator.validateStartGame(room, 2L, Optional.of(round)))
+        assertThatThrownBy(() -> roundValidator.validateStartGame(room, 2L, Optional.of(round), 1l))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("이미 진행 중인 라운드");
     }
 
-    private Room createRoom(Long id, boolean isPlaying) throws Exception {
+    private Room createRoom(Long id, boolean isPlaying, Long hostId) throws Exception {
         Room room = Room.builder()
                 .title("테스트 방")
-                .hostId(1L)
+                .hostId(hostId)
                 .totalRounds((short) 3)
                 .maxPlayers((short) 4)
                 .curPlayers((short) 2)
