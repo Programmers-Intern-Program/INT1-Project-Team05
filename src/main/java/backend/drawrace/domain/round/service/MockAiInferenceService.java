@@ -1,12 +1,11 @@
 package backend.drawrace.domain.round.service;
 
-import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
 import backend.drawrace.domain.round.dto.AiInferenceResponse;
 
 @Service
-//@Primary
+// @Primary
 public class MockAiInferenceService implements AiInferenceService {
 
     @Override

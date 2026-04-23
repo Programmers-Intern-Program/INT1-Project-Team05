@@ -2,8 +2,6 @@ package backend.drawrace.domain.round.service;
 
 import java.util.List;
 
-import jakarta.persistence.EntityNotFoundException;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +23,7 @@ import backend.drawrace.domain.round.repository.RoundParticipantRepository;
 import backend.drawrace.domain.round.repository.RoundRepository;
 import backend.drawrace.domain.round.repository.RoundSubmissionRepository;
 import backend.drawrace.domain.round.validator.RoundValidator;
+import backend.drawrace.global.exception.ServiceException;
 
 import lombok.RequiredArgsConstructor;
 
@@ -51,9 +50,7 @@ public class RoundService {
      */
     @Transactional
     public RoundStartResponse startGame(Long roomId, Long userId) {
-        Room room = roomRepository
-                .findById(roomId)
-                .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 방입니다. roomId=" + roomId));
+        Room room = roomRepository.findById(roomId).orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 방입니다."));
 
         long participantCount = participantRepository.countByRoomId(roomId);
 
@@ -84,9 +81,8 @@ public class RoundService {
     @Transactional
     public SubmitDrawingResponse submitDrawing(Long roundId, SubmitDrawingRequest request) {
         // 1. 현재 라운드 조회 및 진행 상태 검증
-        Round round = roundRepository
-                .findById(roundId)
-                .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 라운드입니다. roundId=" + roundId));
+        Round round =
+                roundRepository.findById(roundId).orElseThrow(() -> new ServiceException("404-2", "존재하지 않는 라운드입니다."));
 
         roundValidator.validateRoundInProgress(round);
 
@@ -96,14 +92,12 @@ public class RoundService {
         // 3. 이번 라운드 제출 대상인지 검증
         boolean canPlay =
                 roundParticipantRepository.existsByRoundIdAndParticipantId(round.getId(), participant.getId());
-        roundValidator.validateRoundParticipant(canPlay, participant.getId());
+        roundValidator.validateRoundParticipant(canPlay);
 
         // 4. 이미 제출했는지 검증
         boolean alreadySubmitted =
                 roundSubmissionRepository.existsByRoundIdAndParticipantId(round.getId(), participant.getId());
-        if (alreadySubmitted) {
-            throw new IllegalStateException("이미 제출을 완료한 참가자입니다. participantId=" + participant.getId());
-        }
+        roundValidator.validateNotSubmitted(alreadySubmitted);
 
         // 5. AI 판독
         AiInferenceResponse aiResult = aiInferenceService.infer(request.getImageData(), round.getKeyword());
@@ -144,7 +138,7 @@ public class RoundService {
     public CurrentRoundResponse getCurrentRound(Long roomId) {
         Round currentRound = roundRepository
                 .findByRoomIdAndIsActiveTrue(roomId)
-                .orElseThrow(() -> new EntityNotFoundException("현재 진행 중인 라운드가 없습니다. roomId=" + roomId));
+                .orElseThrow(() -> new ServiceException("404-3", "현재 진행 중인 라운드가 없습니다."));
 
         List<RoundParticipantResponse> participants =
                 roundParticipantRepository.findByRoundId(currentRound.getId()).stream()
@@ -161,8 +155,7 @@ public class RoundService {
     private Participant getValidParticipant(Round round, Long participantId) {
         return participantRepository
                 .findByIdAndRoomId(participantId, round.getRoom().getId())
-                .orElseThrow(
-                        () -> new EntityNotFoundException("해당 라운드의 방에 속한 참가자가 아닙니다. participantId=" + participantId));
+                .orElseThrow(() -> new ServiceException("404-4", "해당 방에 속한 참가자가 아닙니다."));
     }
 
     /**
@@ -174,7 +167,7 @@ public class RoundService {
 
         RoundSubmission winnerSubmission = submissions.stream()
                 .max((a, b) -> Double.compare(a.getScore(), b.getScore()))
-                .orElseThrow(() -> new IllegalStateException("제출 기록이 없습니다. roundId=" + round.getId()));
+                .orElseThrow(() -> new ServiceException("500-1", "제출 기록이 존재하지 않습니다."));
 
         Participant roundWinner = winnerSubmission.getParticipant();
         roundWinner.increaseRoundWinCount();
