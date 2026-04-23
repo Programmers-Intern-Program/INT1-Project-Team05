@@ -2,7 +2,6 @@ package backend.drawrace.domain.round.controller;
 
 import jakarta.validation.Valid;
 
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import backend.drawrace.domain.round.dto.SubmitDrawingRequest;
@@ -20,11 +19,9 @@ public class RoundController {
     private final RoundService roundService;
 
     @PostMapping("/{roundId}/submit")
-    public ResponseEntity<RsData<SubmitDrawingResponse>> submitDrawing(
+    public RsData<SubmitDrawingResponse> submitDrawing(
             @PathVariable Long roundId, @Valid @RequestBody SubmitDrawingRequest request) {
-
         SubmitDrawingResponse response = roundService.submitDrawing(roundId, request);
-
-        return ResponseEntity.ok(new RsData<>("200-1", "그림 제출이 완료되었습니다.", response));
+        return new RsData<>("200-1", "그림 제출이 완료되었습니다.", response);
     }
 }
