@@ -6,8 +6,11 @@ import static org.mockito.BDDMockito.*;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
+import backend.drawrace.domain.user.entity.UserStats;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,6 +27,7 @@ import backend.drawrace.domain.room.repository.RoomRepository;
 import backend.drawrace.domain.user.entity.User;
 import backend.drawrace.domain.user.repository.UserRepository;
 import backend.drawrace.global.exception.ServiceException;
+import org.springframework.data.redis.core.ZSetOperations;
 
 @ExtendWith(MockitoExtension.class)
 class RoomServiceTest {
@@ -37,6 +41,9 @@ class RoomServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private RankingService rankingService;
+
     @InjectMocks
     private RoomService roomService;
 
@@ -45,7 +52,7 @@ class RoomServiceTest {
     void createRoom_success() throws Exception {
         Long userId = 1L;
         CreateRoomReq req = new CreateRoomReq("테스트 방", (short) 4, (short) 3, "1234");
-        User user = User.builder().email("test@test.com").nickname("채은").build();
+        User user = User.builder().email("test@test.com").nickname("유저A").build();
 
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(roomRepository.save(any(Room.class))).willAnswer(inv -> {
@@ -81,6 +88,37 @@ class RoomServiceTest {
     }
 
     @Test
+    @DisplayName("게임 종료 성공 - 우승자 마킹 및 스탯이 업데이트된다")
+    void finishGame_success() throws Exception {
+
+        Long roomId = 100L;
+        Long winnerId = 1L;
+        Room room = createRoom(roomId, "게임방", winnerId);
+        setField(room, "isPlaying", true);
+
+        User winnerUser = createUser(winnerId, "우승자");
+        UserStats stats = UserStats.builder().user(winnerUser).build();
+        setField(winnerUser, "stats", stats);
+
+        Participant participant = Participant.builder()
+                .userId(winnerUser).room(room).roundWinCount(3).build();
+
+        ZSetOperations.TypedTuple<String> tuple = mock(ZSetOperations.TypedTuple.class);
+        given(rankingService.getRankingList(roomId)).willReturn(Set.of(tuple));
+
+        given(roomRepository.findById(roomId)).willReturn(Optional.of(room));
+        given(participantRepository.findByRoomId(roomId)).willReturn(List.of(participant));
+
+        roomService.finishGame(roomId);
+
+        assertThat(room.isPlaying()).isFalse();
+        assertThat(participant.isWinner()).isTrue();
+        assertThat(stats.getTotalGameCount()).isEqualTo(1);
+        assertThat(stats.getWinGameCount()).isEqualTo(1);
+        verify(rankingService).clearRanking(roomId);
+    }
+
+    @Test
     @DisplayName("방 퇴장 성공 - 방장이 나가면 다음 사람에게 위임된다")
     void leaveRoom_hostDelegation() throws Exception {
         // given
@@ -105,10 +143,8 @@ class RoomServiceTest {
         given(userRepository.findById(hostId)).willReturn(Optional.of(hostUser));
         given(participantRepository.findByRoomAndUserId(room, hostUser)).willReturn(Optional.of(hostPart));
 
-        // when
         roomService.leaveRoom(roomId, hostId);
 
-        // then
         assertThat(room.getHostId()).isEqualTo(nextHostId);
         assertThat(nextPart.isHost()).isTrue();
         verify(participantRepository).delete(hostPart);
