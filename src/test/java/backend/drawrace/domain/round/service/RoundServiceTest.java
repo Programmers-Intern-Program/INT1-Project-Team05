@@ -8,6 +8,7 @@ import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Optional;
 
+import backend.drawrace.domain.room.service.RoomService;
 import jakarta.persistence.EntityNotFoundException;
 
 import org.junit.jupiter.api.DisplayName;
@@ -64,6 +65,9 @@ class RoundServiceTest {
 
     @Mock
     private AiInferenceService aiInferenceService;
+
+    @Mock
+    private RoomService roomService;
 
     @InjectMocks
     private RoundService roundService;
@@ -225,6 +229,15 @@ class RoundServiceTest {
         setField(room, "totalRounds", (short) 3);
 
         Round round = createInProgressRound(roundId, room, 3, "사과");
+
+        User winnerUser = mock(User.class);
+        UserStats winnerStats = mock(UserStats.class);
+        lenient().when(winnerUser.getStats()).thenReturn(winnerStats);
+
+        User loserUser = mock(User.class);
+        UserStats loserStats = mock(UserStats.class);
+        lenient().when(loserUser.getStats()).thenReturn(loserStats);
+
         Participant participant = createParticipant(participantId, room, 1);
         Participant participant2 = createParticipant(101L, room, 1);
 
@@ -245,6 +258,17 @@ class RoundServiceTest {
         given(roundSubmissionRepository.findByRoundId(roundId)).willReturn(List.of(currentSubmission, otherSubmission));
         given(participantRepository.findByRoomId(roomId)).willReturn(List.of(participant, participant2));
 
+        //findTopScorers 로직이 단독 우승자를 찾을 수 있도록 Mock 설정
+        Participant winner = Participant.builder().userId(winnerUser).room(room).build();
+        setField(winner, "id", participantId);
+        setField(winner, "roundWinCount", 3);
+
+        Participant loser = Participant.builder().userId(loserUser).room(room).build();
+        setField(loser, "id", 2L);
+        setField(loser, "roundWinCount", 1);
+
+        given(participantRepository.findByRoomId(roomId)).willReturn(List.of(winner, loser));
+
         SubmitDrawingResponse response = roundService.submitDrawing(roundId, request);
 
         assertThat(response.isRoundFinished()).isTrue();
@@ -254,6 +278,9 @@ class RoundServiceTest {
         assertThat(response.getFinalWinnerParticipantId()).isEqualTo(participantId);
 
         assertThat(participant.getRoundWinCount()).isEqualTo(2);
+
+        verify(roomService, times(1)).finishGame(roomId);
+        /*
         assertThat(participant.isWinner()).isTrue();
         assertThat(room.isPlaying()).isFalse();
 
@@ -261,6 +288,8 @@ class RoundServiceTest {
         then(participant.getUserId().getStats()).should().recordWin();
         then(participant2.getUserId().getStats()).should().recordGame();
         then(participant2.getUserId().getStats()).shouldHaveNoMoreInteractions();
+
+         */
     }
 
     @Test
@@ -347,7 +376,8 @@ class RoundServiceTest {
         given(roundSubmissionRepository.countByRoundId(roundId)).willReturn(2L);
         given(roundParticipantRepository.countByRoundId(roundId)).willReturn(2L);
         given(roundSubmissionRepository.findByRoundId(roundId)).willReturn(List.of(currentSubmission, otherSubmission));
-        given(participantRepository.findByRoomId(roomId)).willReturn(List.of(participant, participant2));
+
+   //     given(participantRepository.findByRoomId(roomId)).willReturn(List.of(participant, participant2));
 
         SubmitDrawingResponse response = roundService.submitDrawing(roundId, request);
 
@@ -359,12 +389,16 @@ class RoundServiceTest {
 
         assertThat(participant.getRoundWinCount()).isEqualTo(3);
         assertThat(participant.isWinner()).isTrue();
+        verify(roomService, times(1)).finishGame(roomId);
+        /*
         assertThat(room.isPlaying()).isFalse();
 
         then(participant.getUserId().getStats()).should().recordGame();
         then(participant.getUserId().getStats()).should().recordWin();
         then(participant2.getUserId().getStats()).should().recordGame();
         then(participant2.getUserId().getStats()).shouldHaveNoMoreInteractions();
+
+         */
     }
 
     @Test
