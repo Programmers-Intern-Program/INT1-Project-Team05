@@ -51,12 +51,14 @@ class RoundGameControllerTest {
 
         mockMvc.perform(post("/api/rooms/{roomId}/start", roomId).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.roomId").value(1))
-                .andExpect(jsonPath("$.roundId").value(10))
-                .andExpect(jsonPath("$.roundNumber").value(1))
-                .andExpect(jsonPath("$.keyword").value("사과"))
-                .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
-                .andExpect(jsonPath("$.startedAt").exists());
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("게임이 시작되었습니다."))
+                .andExpect(jsonPath("$.data.roomId").value(1))
+                .andExpect(jsonPath("$.data.roundId").value(10))
+                .andExpect(jsonPath("$.data.roundNumber").value(1))
+                .andExpect(jsonPath("$.data.keyword").value("사과"))
+                .andExpect(jsonPath("$.data.status").value("IN_PROGRESS"))
+                .andExpect(jsonPath("$.data.startedAt").exists());
     }
 
     @Test
@@ -91,12 +93,14 @@ class RoundGameControllerTest {
 
         mockMvc.perform(get("/api/rooms/{roomId}/rounds/current", roomId).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.roomId").value(1))
-                .andExpect(jsonPath("$.roundId").value(10))
-                .andExpect(jsonPath("$.roundNumber").value(2))
-                .andExpect(jsonPath("$.keyword").value("사과"))
-                .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
-                .andExpect(jsonPath("$.tiebreaker").value(false))
-                .andExpect(jsonPath("$.participants.length()").value(2));
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("현재 라운드 조회에 성공했습니다."))
+                .andExpect(jsonPath("$.data.roomId").value(1))
+                .andExpect(jsonPath("$.data.roundId").value(10))
+                .andExpect(jsonPath("$.data.roundNumber").value(2))
+                .andExpect(jsonPath("$.data.keyword").value("사과"))
+                .andExpect(jsonPath("$.data.status").value("IN_PROGRESS"))
+                .andExpect(jsonPath("$.data.tiebreaker").value(false))
+                .andExpect(jsonPath("$.data.participants.length()").value(2));
     }
 }

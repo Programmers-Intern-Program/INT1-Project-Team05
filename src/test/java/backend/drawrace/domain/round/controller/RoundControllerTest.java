@@ -68,18 +68,20 @@ class RoundControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.roundId").value(10))
-                .andExpect(jsonPath("$.aiAnswer").value("사과"))
-                .andExpect(jsonPath("$.score").value(0.95))
-                .andExpect(jsonPath("$.submittedCount").value(2))
-                .andExpect(jsonPath("$.totalParticipantCount").value(2))
-                .andExpect(jsonPath("$.roundFinished").value(true))
-                .andExpect(jsonPath("$.gameFinished").value(false))
-                .andExpect(jsonPath("$.tieBreakerStarted").value(false))
-                .andExpect(jsonPath("$.roundWinnerParticipantId").value(100))
-                .andExpect(jsonPath("$.nextRoundId").value(20))
-                .andExpect(jsonPath("$.nextRoundNumber").value(2))
-                .andExpect(jsonPath("$.nextRoundTieBreaker").value(false));
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("그림 제출이 완료되었습니다."))
+                .andExpect(jsonPath("$.data.roundId").value(10))
+                .andExpect(jsonPath("$.data.aiAnswer").value("사과"))
+                .andExpect(jsonPath("$.data.score").value(0.95))
+                .andExpect(jsonPath("$.data.submittedCount").value(2))
+                .andExpect(jsonPath("$.data.totalParticipantCount").value(2))
+                .andExpect(jsonPath("$.data.roundFinished").value(true))
+                .andExpect(jsonPath("$.data.gameFinished").value(false))
+                .andExpect(jsonPath("$.data.tieBreakerStarted").value(false))
+                .andExpect(jsonPath("$.data.roundWinnerParticipantId").value(100))
+                .andExpect(jsonPath("$.data.nextRoundId").value(20))
+                .andExpect(jsonPath("$.data.nextRoundNumber").value(2))
+                .andExpect(jsonPath("$.data.nextRoundTieBreaker").value(false));
     }
 
     private void setField(Object target, String fieldName, Object value) throws Exception {
