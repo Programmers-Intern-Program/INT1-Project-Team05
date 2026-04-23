@@ -2,8 +2,6 @@ package backend.drawrace.domain.user.controller;
 
 import jakarta.validation.Valid;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,6 +14,7 @@ import backend.drawrace.domain.user.dto.LoginRequest;
 import backend.drawrace.domain.user.dto.LoginResponse;
 import backend.drawrace.domain.user.dto.TokenRequest;
 import backend.drawrace.domain.user.service.AuthService;
+import backend.drawrace.global.rsdata.RsData;
 import backend.drawrace.global.security.SecurityUser;
 
 import lombok.RequiredArgsConstructor;
@@ -28,25 +27,26 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/signup")
-    public ResponseEntity<Long> signup(@RequestBody @Valid CreateUserRequest request) {
+    public RsData<Long> signup(@RequestBody @Valid CreateUserRequest request) {
         Long userId = authService.signup(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(userId);
+        return new RsData<>("201-1", "회원가입이 완료되었습니다.", userId);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody @Valid LoginRequest dto) {
+    public RsData<LoginResponse> login(@RequestBody @Valid LoginRequest dto) {
         LoginResponse token = authService.login(dto);
-        return ResponseEntity.ok(token);
+        return new RsData<>("200-1", "로그인에 성공했습니다.", token);
     }
 
     @PostMapping("/reissue")
-    public ResponseEntity<LoginResponse> reissue(@RequestBody @Valid TokenRequest dto) {
-        return ResponseEntity.ok(authService.reissue(dto));
+    public RsData<LoginResponse> reissue(@RequestBody @Valid TokenRequest dto) {
+        LoginResponse token = authService.reissue(dto);
+        return new RsData<>("200-2", "토큰이 재발급되었습니다.", token);
     }
 
     @DeleteMapping("/logout")
-    public ResponseEntity<Void> logout(@AuthenticationPrincipal SecurityUser user) {
+    public RsData<Void> logout(@AuthenticationPrincipal SecurityUser user) {
         authService.logout(user.getUserId());
-        return ResponseEntity.noContent().build();
+        return new RsData<>("200-3", "로그아웃되었습니다.");
     }
 }

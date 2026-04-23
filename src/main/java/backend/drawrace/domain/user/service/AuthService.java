@@ -21,7 +21,16 @@ public interface AuthService {
      */
     LoginResponse login(LoginRequest dto);
 
+    /**
+     * Access Token 재발급
+     * @param request 유효한 Refresh Token
+     * @return 새로 발급된 Access Token과 Refresh Token
+     */
     LoginResponse reissue(TokenRequest request);
 
+    /**
+     * 로그아웃 (Refresh Token 삭제)
+     * @param userId 로그아웃할 유저 ID
+     */
     void logout(Long userId);
 }
