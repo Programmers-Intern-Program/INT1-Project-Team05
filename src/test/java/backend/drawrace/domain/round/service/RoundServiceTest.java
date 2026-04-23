@@ -8,7 +8,6 @@ import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Optional;
 
-import backend.drawrace.domain.room.service.RoomService;
 import jakarta.persistence.EntityNotFoundException;
 
 import org.junit.jupiter.api.DisplayName;
@@ -23,6 +22,7 @@ import backend.drawrace.domain.room.entity.Participant;
 import backend.drawrace.domain.room.entity.Room;
 import backend.drawrace.domain.room.repository.ParticipantRepository;
 import backend.drawrace.domain.room.repository.RoomRepository;
+import backend.drawrace.domain.room.service.RoomService;
 import backend.drawrace.domain.round.dto.AiInferenceResponse;
 import backend.drawrace.domain.round.dto.CurrentRoundResponse;
 import backend.drawrace.domain.round.dto.RoundStartResponse;
@@ -258,7 +258,7 @@ class RoundServiceTest {
         given(roundSubmissionRepository.findByRoundId(roundId)).willReturn(List.of(currentSubmission, otherSubmission));
         given(participantRepository.findByRoomId(roomId)).willReturn(List.of(participant, participant2));
 
-        //findTopScorers 로직이 단독 우승자를 찾을 수 있도록 Mock 설정
+        // findTopScorers 로직이 단독 우승자를 찾을 수 있도록 Mock 설정
         Participant winner = Participant.builder().userId(winnerUser).room(room).build();
         setField(winner, "id", participantId);
         setField(winner, "roundWinCount", 3);
@@ -377,7 +377,7 @@ class RoundServiceTest {
         given(roundParticipantRepository.countByRoundId(roundId)).willReturn(2L);
         given(roundSubmissionRepository.findByRoundId(roundId)).willReturn(List.of(currentSubmission, otherSubmission));
 
-   //     given(participantRepository.findByRoomId(roomId)).willReturn(List.of(participant, participant2));
+        //     given(participantRepository.findByRoomId(roomId)).willReturn(List.of(participant, participant2));
 
         SubmitDrawingResponse response = roundService.submitDrawing(roundId, request);
 
