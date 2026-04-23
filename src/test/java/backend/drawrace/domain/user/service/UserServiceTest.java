@@ -50,4 +50,24 @@ class UserServiceTest {
                 .isInstanceOf(ServiceException.class)
                 .hasFieldOrPropertyWithValue("resultCode", "404-1");
     }
+
+    @Test
+    @DisplayName("회원_탈퇴_성공")
+    void deleteUser_success() {
+        Long savedId = createTestUser();
+
+        userService.deleteUser(savedId);
+
+        assertThatThrownBy(() -> userService.getUser(savedId))
+                .isInstanceOf(ServiceException.class)
+                .hasFieldOrPropertyWithValue("statusCode", 404);
+    }
+
+    @Test
+    @DisplayName("회원_탈퇴_실패_존재하지_않는_ID")
+    void deleteUser_fail_not_found() {
+        assertThatThrownBy(() -> userService.deleteUser(999L))
+                .isInstanceOf(ServiceException.class)
+                .hasFieldOrPropertyWithValue("statusCode", 404);
+    }
 }
