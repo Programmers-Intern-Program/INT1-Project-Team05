@@ -12,6 +12,8 @@ public class UserInfoResponse {
     private String email;
     private String nickname;
     private String profileImageUrl;
+    private int totalGameCount;
+    private int winGameCount;
 
     public static UserInfoResponse from(User user) {
         return UserInfoResponse.builder()
@@ -19,6 +21,8 @@ public class UserInfoResponse {
                 .email(user.getEmail())
                 .nickname(user.getNickname())
                 .profileImageUrl(user.getProfileImageUrl())
+                .totalGameCount(user.getStats().getTotalGameCount())
+                .winGameCount(user.getStats().getWinGameCount())
                 .build();
     }
 }

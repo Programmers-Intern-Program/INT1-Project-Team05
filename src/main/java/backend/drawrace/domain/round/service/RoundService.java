@@ -198,6 +198,7 @@ public class RoundService {
         if (round.isTiebreaker()) {
             roundWinner.markWinner();
             room.finishGame();
+            recordGameResults(room, roundWinner);
 
             return SubmitDrawingResponse.builder()
                     .roundId(round.getId())
@@ -259,6 +260,7 @@ public class RoundService {
             Participant finalWinner = topScorers.get(0);
             finalWinner.markWinner();
             room.finishGame();
+            recordGameResults(room, finalWinner);
 
             return SubmitDrawingResponse.builder()
                     .roundId(round.getId())
@@ -329,6 +331,17 @@ public class RoundService {
         tieBreakerRound.start();
 
         return roundRepository.save(tieBreakerRound);
+    }
+
+    /**
+     * 게임 종료 시 전원 totalGameCount +1, 최종 우승자 winGameCount +1
+     */
+    private void recordGameResults(Room room, Participant winner) {
+        List<Participant> participants = participantRepository.findByRoomId(room.getId());
+
+        participants.forEach(p -> p.getUserId().getStats().recordGame());
+
+        winner.getUserId().getStats().recordWin();
     }
 
     /**
