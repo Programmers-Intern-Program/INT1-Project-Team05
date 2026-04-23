@@ -32,7 +32,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void deleteUser(Long userId) {
         if (!userRepository.existsById(userId)) {
-            throw new ServiceException(404, "존재하지 않는 유저입니다. ID: " + userId);
+            throw new ServiceException("404-1", "존재하지 않는 유저입니다. ID: " + userId);
         }
         refreshTokenRepository.deleteById(userId);
         userRepository.deleteById(userId);

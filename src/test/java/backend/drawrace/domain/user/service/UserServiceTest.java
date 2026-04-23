@@ -60,7 +60,7 @@ class UserServiceTest {
 
         assertThatThrownBy(() -> userService.getUser(savedId))
                 .isInstanceOf(ServiceException.class)
-                .hasFieldOrPropertyWithValue("statusCode", 404);
+                .hasFieldOrPropertyWithValue("resultCode", "404-1");
     }
 
     @Test
@@ -68,6 +68,6 @@ class UserServiceTest {
     void deleteUser_fail_not_found() {
         assertThatThrownBy(() -> userService.deleteUser(999L))
                 .isInstanceOf(ServiceException.class)
-                .hasFieldOrPropertyWithValue("statusCode", 404);
+                .hasFieldOrPropertyWithValue("resultCode", "404-1");
     }
 }
