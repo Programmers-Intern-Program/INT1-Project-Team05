@@ -42,11 +42,7 @@ class AuthServiceTest {
     }
 
     private Long createTestUser() {
-        return authService.signup(CreateUserRequest.builder()
-                .email("test@example.com")
-                .password("password123")
-                .nickname("테스터")
-                .build());
+        return authService.signup(new CreateUserRequest("test@example.com", "password123", "테스터"));
     }
 
     // ===== 회원가입 =====
@@ -54,11 +50,7 @@ class AuthServiceTest {
     @Test
     @DisplayName("회원가입_성공")
     void signup_success() {
-        CreateUserRequest request = CreateUserRequest.builder()
-                .email("new@example.com")
-                .password("password123")
-                .nickname("신규유저")
-                .build();
+        CreateUserRequest request = new CreateUserRequest("new@example.com", "password123", "신규유저");
 
         Long savedId = authService.signup(request);
 
@@ -70,11 +62,7 @@ class AuthServiceTest {
     void signup_fail_duplicate_email() {
         createTestUser();
 
-        CreateUserRequest request = CreateUserRequest.builder()
-                .email("test@example.com")
-                .password("password456")
-                .nickname("다른닉네임")
-                .build();
+        CreateUserRequest request = new CreateUserRequest("test@example.com", "password456", "다른닉네임");
 
         assertThatThrownBy(() -> authService.signup(request))
                 .isInstanceOf(ServiceException.class)
@@ -86,11 +74,7 @@ class AuthServiceTest {
     void signup_fail_duplicate_nickname() {
         createTestUser();
 
-        CreateUserRequest request = CreateUserRequest.builder()
-                .email("other@example.com")
-                .password("password456")
-                .nickname("테스터")
-                .build();
+        CreateUserRequest request = new CreateUserRequest("other@example.com", "password456", "테스터");
 
         assertThatThrownBy(() -> authService.signup(request))
                 .isInstanceOf(ServiceException.class)
@@ -106,8 +90,8 @@ class AuthServiceTest {
 
         LoginResponse response = authService.login(new LoginRequest("test@example.com", "password123"));
 
-        assertThat(response.getAccessToken()).isNotBlank();
-        assertThat(response.getRefreshToken()).isNotBlank();
+        assertThat(response.accessToken()).isNotBlank();
+        assertThat(response.refreshToken()).isNotBlank();
         // assertThat(refreshTokenRepository.findById(userId)).isPresent();
         verify(refreshTokenRepository).save(any(RefreshToken.class));
     }
@@ -142,19 +126,19 @@ class AuthServiceTest {
 
         // Mock 설정
         given(refreshTokenRepository.findById(userId))
-                .willReturn(Optional.of(new RefreshToken(userId, loginResponse.getRefreshToken())));
+                .willReturn(Optional.of(new RefreshToken(userId, loginResponse.refreshToken())));
 
-        LoginResponse reissueResponse = authService.reissue(new TokenRequest(loginResponse.getRefreshToken()));
+        LoginResponse reissueResponse = authService.reissue(new TokenRequest(loginResponse.refreshToken()));
 
-        assertThat(reissueResponse.getAccessToken()).isNotBlank();
-        assertThat(reissueResponse.getRefreshToken()).isNotBlank();
+        assertThat(reissueResponse.accessToken()).isNotBlank();
+        assertThat(reissueResponse.refreshToken()).isNotBlank();
         // 토큰 로테이션 검증 — Redis에 새 Refresh Token이 저장돼야 함
 
         /*        String storedToken = refreshTokenRepository
                        .findById(userId)
                        .map(RefreshToken::getTokenValue)
                        .orElseThrow();
-               assertThat(storedToken).isEqualTo(reissueResponse.getRefreshToken());
+               assertThat(storedToken).isEqualTo(reissueResponse.refreshToken());
 
         */
         verify(refreshTokenRepository).save(any(RefreshToken.class));
@@ -181,7 +165,7 @@ class AuthServiceTest {
         given(refreshTokenRepository.findById(userId))
                 .willReturn(Optional.of(new RefreshToken(userId, "different_token")));
 
-        assertThatThrownBy(() -> authService.reissue(new TokenRequest(firstLogin.getRefreshToken())))
+        assertThatThrownBy(() -> authService.reissue(new TokenRequest(firstLogin.refreshToken())))
                 .isInstanceOf(ServiceException.class)
                 .hasFieldOrPropertyWithValue("resultCode", "401-4");
     }
@@ -193,7 +177,7 @@ class AuthServiceTest {
         LoginResponse loginResponse = authService.login(new LoginRequest("test@example.com", "password123"));
         authService.logout(userId);
 
-        assertThatThrownBy(() -> authService.reissue(new TokenRequest(loginResponse.getRefreshToken())))
+        assertThatThrownBy(() -> authService.reissue(new TokenRequest(loginResponse.refreshToken())))
                 .isInstanceOf(ServiceException.class)
                 .hasFieldOrPropertyWithValue("resultCode", "401-3");
     }

@@ -29,6 +29,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public User findById(Long userId) {
+        return userRepository
+                .findById(userId)
+                .orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 유저입니다. ID: " + userId));
+    }
+
+    @Override
     @Transactional
     public void deleteUser(Long userId) {
         if (!userRepository.existsById(userId)) {
