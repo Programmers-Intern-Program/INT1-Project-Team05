@@ -2,7 +2,7 @@ package backend.drawrace.domain.round.service;
 
 import java.util.List;
 
-import org.springframework.context.annotation.Primary;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -19,7 +19,7 @@ import backend.drawrace.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 
 @Service
-@Primary
+@ConditionalOnProperty(name = "ai.mode", havingValue = "gateway")
 @RequiredArgsConstructor
 public class GatewayAiInferenceService implements AiInferenceService {
 
@@ -40,12 +40,11 @@ public class GatewayAiInferenceService implements AiInferenceService {
                         GatewayChatRequest.systemMessage(buildSystemPrompt()),
                         GatewayChatRequest.userMessage(List.of(
                                 GatewayChatRequest.textContent(buildUserPrompt(keyword)),
-                                GatewayChatRequest.imageContent(imageData)
-                        ))
-                ))
+                                GatewayChatRequest.imageContent(imageData)))))
                 .build();
 
-        GatewayChatResponse response = restClient.post()
+        GatewayChatResponse response = restClient
+                .post()
                 .uri("/chat/completions")
                 .body(request)
                 .retrieve()

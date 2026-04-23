@@ -22,30 +22,18 @@ public class GatewayChatRequest {
     }
 
     public static Message systemMessage(String content) {
-        return Message.builder()
-                .role("system")
-                .content(content)
-                .build();
+        return Message.builder().role("system").content(content).build();
     }
 
     public static Message userMessage(Object content) {
-        return Message.builder()
-                .role("user")
-                .content(content)
-                .build();
+        return Message.builder().role("user").content(content).build();
     }
 
     public static Map<String, Object> textContent(String text) {
-        return Map.of(
-                "type", "text",
-                "text", text
-        );
+        return Map.of("type", "text", "text", text);
     }
 
     public static Map<String, Object> imageContent(String imageData) {
-        return Map.of(
-                "type", "image_url",
-                "image_url", Map.of("url", imageData)
-        );
+        return Map.of("type", "image_url", "image_url", Map.of("url", imageData));
     }
 }
