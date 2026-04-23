@@ -10,13 +10,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import backend.drawrace.domain.user.entity.UserStats;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.ZSetOperations;
 
 import backend.drawrace.domain.room.dto.request.CreateRoomReq;
 import backend.drawrace.domain.room.dto.response.RoomInfoRes;
@@ -25,9 +25,9 @@ import backend.drawrace.domain.room.entity.Room;
 import backend.drawrace.domain.room.repository.ParticipantRepository;
 import backend.drawrace.domain.room.repository.RoomRepository;
 import backend.drawrace.domain.user.entity.User;
+import backend.drawrace.domain.user.entity.UserStats;
 import backend.drawrace.domain.user.repository.UserRepository;
 import backend.drawrace.global.exception.ServiceException;
-import org.springframework.data.redis.core.ZSetOperations;
 
 @ExtendWith(MockitoExtension.class)
 class RoomServiceTest {
@@ -101,7 +101,10 @@ class RoomServiceTest {
         setField(winnerUser, "stats", stats);
 
         Participant participant = Participant.builder()
-                .userId(winnerUser).room(room).roundWinCount(3).build();
+                .userId(winnerUser)
+                .room(room)
+                .roundWinCount(3)
+                .build();
 
         ZSetOperations.TypedTuple<String> tuple = mock(ZSetOperations.TypedTuple.class);
         given(rankingService.getRankingList(roomId)).willReturn(Set.of(tuple));

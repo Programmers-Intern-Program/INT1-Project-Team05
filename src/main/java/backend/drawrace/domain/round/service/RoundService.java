@@ -2,7 +2,6 @@ package backend.drawrace.domain.round.service;
 
 import java.util.List;
 
-import backend.drawrace.domain.room.service.RoomService;
 import jakarta.persistence.EntityNotFoundException;
 
 import org.springframework.stereotype.Service;
@@ -12,6 +11,7 @@ import backend.drawrace.domain.room.entity.Participant;
 import backend.drawrace.domain.room.entity.Room;
 import backend.drawrace.domain.room.repository.ParticipantRepository;
 import backend.drawrace.domain.room.repository.RoomRepository;
+import backend.drawrace.domain.room.service.RoomService;
 import backend.drawrace.domain.round.dto.AiInferenceResponse;
 import backend.drawrace.domain.round.dto.CurrentRoundResponse;
 import backend.drawrace.domain.round.dto.RoundParticipantResponse;
@@ -199,8 +199,8 @@ public class RoundService {
         // 결승 라운드면 바로 최종 우승
         if (round.isTiebreaker()) {
             roundWinner.markWinner();
-           //room.finishGame();
-           //recordGameResults(room, roundWinner);
+            // room.finishGame();
+            // recordGameResults(room, roundWinner);
             roomService.finishGame(room.getId());
 
             return SubmitDrawingResponse.builder()
@@ -261,9 +261,9 @@ public class RoundService {
         // 단독 우승
         if (topScorers.size() == 1) {
             Participant finalWinner = topScorers.get(0);
-            //finalWinner.markWinner();
-            //room.finishGame();
-            //recordGameResults(room, finalWinner);
+            // finalWinner.markWinner();
+            // room.finishGame();
+            // recordGameResults(room, finalWinner);
             roomService.finishGame(room.getId());
 
             return SubmitDrawingResponse.builder()
@@ -336,7 +336,6 @@ public class RoundService {
 
         return roundRepository.save(tieBreakerRound);
     }
-
 
     /**
      * 게임 종료 시 전원 totalGameCount +1, 최종 우승자 winGameCount +1

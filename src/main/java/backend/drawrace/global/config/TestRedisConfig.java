@@ -1,11 +1,13 @@
 package backend.drawrace.global.config;
 
+import java.io.IOException;
+
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
-import org.springframework.boot.test.context.TestConfiguration;
-import redis.embedded.RedisServer;
 
-import java.io.IOException;
+import org.springframework.boot.test.context.TestConfiguration;
+
+import redis.embedded.RedisServer;
 
 @TestConfiguration
 public class TestRedisConfig {

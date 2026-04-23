@@ -3,12 +3,12 @@ package backend.drawrace.domain.room.service;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import backend.drawrace.domain.room.dto.response.RankingRes;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import backend.drawrace.domain.room.dto.request.CreateRoomReq;
 import backend.drawrace.domain.room.dto.response.GetRoomListRes;
+import backend.drawrace.domain.room.dto.response.RankingRes;
 import backend.drawrace.domain.room.dto.response.RoomInfoRes;
 import backend.drawrace.domain.room.entity.Participant;
 import backend.drawrace.domain.room.entity.Room;
@@ -157,8 +157,7 @@ public class RoomService {
     @Transactional
     public void finishGame(Long roomId) {
         // 방 정보 조회 및 상태 변경
-        Room room = roomRepository.findById(roomId)
-                .orElseThrow(() -> new ServiceException("404-2", "방을 찾을 수 없습니다."));
+        Room room = roomRepository.findById(roomId).orElseThrow(() -> new ServiceException("404-2", "방을 찾을 수 없습니다."));
         room.finishGame(); //
 
         // 랭킹 데이터 가져오기

@@ -2,21 +2,19 @@ package backend.drawrace.domain.room.controller;
 
 import java.util.List;
 
-import backend.drawrace.domain.room.dto.response.RankingRes;
 import jakarta.validation.Valid;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import backend.drawrace.domain.room.dto.request.CreateRoomReq;
 import backend.drawrace.domain.room.dto.request.JoinRoomReq;
 import backend.drawrace.domain.room.dto.response.GetRoomListRes;
+import backend.drawrace.domain.room.dto.response.RankingRes;
 import backend.drawrace.domain.room.dto.response.RoomInfoRes;
 import backend.drawrace.domain.room.service.RoomService;
 import backend.drawrace.global.rsdata.RsData;
 import backend.drawrace.global.security.SecurityUser;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import lombok.RequiredArgsConstructor;
 
@@ -30,9 +28,7 @@ public class RoomController {
     // 방 생성
     @PostMapping
     public RsData<RoomInfoRes> createRoom(
-            @Valid @RequestBody CreateRoomReq req,
-            @AuthenticationPrincipal SecurityUser securityUser
-    ) {
+            @Valid @RequestBody CreateRoomReq req, @AuthenticationPrincipal SecurityUser securityUser) {
         RoomInfoRes response = roomService.createRoom(req, securityUser.getUserId());
         return new RsData<>("201-1", "방이 성공적으로 생성되었습니다.", response);
     }
@@ -56,8 +52,7 @@ public class RoomController {
     public RsData<RoomInfoRes> joinRoom(
             @PathVariable Long roomId,
             @RequestBody(required = false) JoinRoomReq req,
-            @AuthenticationPrincipal SecurityUser securityUser
-            ) {
+            @AuthenticationPrincipal SecurityUser securityUser) {
         String password = (req != null) ? req.password() : null;
         RoomInfoRes detail = roomService.joinRoom(roomId, securityUser.getUserId(), password);
         return new RsData<>("200-3", "방에 입장했습니다.", detail);
@@ -72,10 +67,7 @@ public class RoomController {
     */
     // 방 퇴장
     @DeleteMapping("/{roomId}/leave")
-    public RsData<Void> leaveRoom(
-            @PathVariable Long roomId,
-            @AuthenticationPrincipal SecurityUser securityUser
-    ) {
+    public RsData<Void> leaveRoom(@PathVariable Long roomId, @AuthenticationPrincipal SecurityUser securityUser) {
         roomService.leaveRoom(roomId, securityUser.getUserId());
         return new RsData<>("200-4", "방에서 성공적으로 퇴장했습니다.");
     }
