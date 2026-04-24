@@ -41,6 +41,7 @@ public class AuthServiceImpl implements AuthService {
                 .email(dto.email())
                 .password(passwordEncoder.encode(dto.password()))
                 .nickname(dto.nickname())
+                .isAi(false)
                 .build();
 
         return userRepository.save(user).getId();
