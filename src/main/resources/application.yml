@@ -32,7 +32,7 @@ jwt:
   refresh-expiration: 604800000
 
 ai:
-  mode: mock
+  mode: gateway
   gateway:
     base-url: ${AI_GATEWAY_BASE_URL:}
     api-key: ${AI_GATEWAY_API_KEY:}

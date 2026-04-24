@@ -40,17 +40,18 @@ public class GatewayAiInferenceService implements AiInferenceService {
                         GatewayChatRequest.systemMessage(buildSystemPrompt()),
                         GatewayChatRequest.userMessage(List.of(
                                 GatewayChatRequest.textContent(buildUserPrompt(keyword)),
-                                GatewayChatRequest.imageContent(imageData)))))
+                                GatewayChatRequest.imageContent(imageData)
+                        ))
+                ))
                 .build();
 
-        GatewayChatResponse response = restClient
-                .post()
+        GatewayChatResponse response = restClient.post()
                 .uri("/chat/completions")
                 .body(request)
                 .retrieve()
                 .body(GatewayChatResponse.class);
 
-        String content = extractContent(response);
+        String content = sanitizeContent(extractContent(response));
         GatewayInferenceResult result = parseInferenceResult(content);
 
         return new AiInferenceResponse(result.getAiAnswer(), result.getScore());
@@ -89,6 +90,22 @@ public class GatewayAiInferenceService implements AiInferenceService {
         }
 
         return response.getChoices().get(0).getMessage().getContent();
+    }
+
+    private String sanitizeContent(String content) {
+        String cleaned = content
+                .replace("```json", "")
+                .replace("```", "")
+                .trim();
+
+        int start = cleaned.indexOf("{");
+        int end = cleaned.lastIndexOf("}");
+
+        if (start >= 0 && end >= start) {
+            return cleaned.substring(start, end + 1);
+        }
+
+        return cleaned;
     }
 
     private GatewayInferenceResult parseInferenceResult(String content) {
