@@ -16,11 +16,8 @@ import backend.drawrace.global.exception.ServiceException;
 
 class GatewayAiInferenceServiceTest {
 
-    private final GatewayAiInferenceService gatewayAiInferenceService =
-            new GatewayAiInferenceService(
-                    new AiProperties("https://test.example.com", "test-key", "test-model"),
-                    new ObjectMapper()
-            );
+    private final GatewayAiInferenceService gatewayAiInferenceService = new GatewayAiInferenceService(
+            new AiProperties("https://test.example.com", "test-key", "test-model"), new ObjectMapper());
 
     @Test
     @DisplayName("sanitizeContent는 코드블록이 포함된 JSON 응답을 정제한다")

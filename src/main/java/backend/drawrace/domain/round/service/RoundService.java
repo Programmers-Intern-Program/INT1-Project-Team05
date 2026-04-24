@@ -48,8 +48,7 @@ public class RoundService {
      */
     @Transactional
     public RoundStartResponse startGame(Long roomId, Long userId) {
-        Room room = roomRepository.findById(roomId)
-                .orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 방입니다."));
+        Room room = roomRepository.findById(roomId).orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 방입니다."));
 
         long participantCount = participantRepository.countByRoomId(roomId);
 
@@ -80,8 +79,8 @@ public class RoundService {
      */
     @Transactional
     public SubmitDrawingResponse submitDrawing(Long roundId, Long userId, SubmitDrawingRequest request) {
-        Round round = roundRepository.findById(roundId)
-                .orElseThrow(() -> new ServiceException("404-2", "존재하지 않는 라운드입니다."));
+        Round round =
+                roundRepository.findById(roundId).orElseThrow(() -> new ServiceException("404-2", "존재하지 않는 라운드입니다."));
 
         roundValidator.validateRoundInProgress(round);
 
@@ -138,7 +137,8 @@ public class RoundService {
     public CurrentRoundResponse getCurrentRound(Long roomId, Long userId) {
         validateRoomMember(roomId, userId);
 
-        Round currentRound = roundRepository.findByRoomIdAndIsActiveTrue(roomId)
+        Round currentRound = roundRepository
+                .findByRoomIdAndIsActiveTrue(roomId)
                 .orElseThrow(() -> new ServiceException("404-3", "현재 진행 중인 라운드가 없습니다."));
 
         List<RoundParticipantResponse> participants =
@@ -161,7 +161,8 @@ public class RoundService {
      * 현재 라운드의 방에 속한 참가자를 조회한다.
      */
     private Participant getValidParticipant(Round round, Long participantId) {
-        return participantRepository.findByIdAndRoomId(participantId, round.getRoom().getId())
+        return participantRepository
+                .findByIdAndRoomId(participantId, round.getRoom().getId())
                 .orElseThrow(() -> new ServiceException("404-4", "해당 방에 속한 참가자가 아닙니다."));
     }
 

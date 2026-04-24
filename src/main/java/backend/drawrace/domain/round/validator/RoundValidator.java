@@ -1,10 +1,10 @@
 package backend.drawrace.domain.round.validator;
 
-import backend.drawrace.domain.room.entity.Participant;
 import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
+import backend.drawrace.domain.room.entity.Participant;
 import backend.drawrace.domain.room.entity.Room;
 import backend.drawrace.domain.round.entity.Round;
 import backend.drawrace.domain.round.entity.RoundStatus;

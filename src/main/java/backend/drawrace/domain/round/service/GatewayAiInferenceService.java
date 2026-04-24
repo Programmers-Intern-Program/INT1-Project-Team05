@@ -40,12 +40,11 @@ public class GatewayAiInferenceService implements AiInferenceService {
                         GatewayChatRequest.systemMessage(buildSystemPrompt()),
                         GatewayChatRequest.userMessage(List.of(
                                 GatewayChatRequest.textContent(buildUserPrompt(keyword)),
-                                GatewayChatRequest.imageContent(imageData)
-                        ))
-                ))
+                                GatewayChatRequest.imageContent(imageData)))))
                 .build();
 
-        GatewayChatResponse response = restClient.post()
+        GatewayChatResponse response = restClient
+                .post()
                 .uri("/chat/completions")
                 .body(request)
                 .retrieve()
@@ -93,10 +92,7 @@ public class GatewayAiInferenceService implements AiInferenceService {
     }
 
     private String sanitizeContent(String content) {
-        String cleaned = content
-                .replace("```json", "")
-                .replace("```", "")
-                .trim();
+        String cleaned = content.replace("```json", "").replace("```", "").trim();
 
         int start = cleaned.indexOf("{");
         int end = cleaned.lastIndexOf("}");

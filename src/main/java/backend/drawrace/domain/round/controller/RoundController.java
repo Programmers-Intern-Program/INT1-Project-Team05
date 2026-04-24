@@ -24,10 +24,8 @@ public class RoundController {
     public RsData<SubmitDrawingResponse> submitDrawing(
             @PathVariable Long roundId,
             @Valid @RequestBody SubmitDrawingRequest request,
-            @AuthenticationPrincipal SecurityUser securityUser
-    ) {
-        SubmitDrawingResponse response =
-                roundService.submitDrawing(roundId, securityUser.getUserId(), request);
+            @AuthenticationPrincipal SecurityUser securityUser) {
+        SubmitDrawingResponse response = roundService.submitDrawing(roundId, securityUser.getUserId(), request);
         return new RsData<>("200-1", "그림 제출이 완료되었습니다.", response);
     }
 }

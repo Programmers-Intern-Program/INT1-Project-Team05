@@ -64,8 +64,7 @@ class RoundGameControllerTest {
 
         given(roundService.startGame(roomId, userId)).willReturn(response);
 
-        mockMvc.perform(post("/api/rooms/{roomId}/start", roomId)
-                        .contentType(MediaType.APPLICATION_JSON))
+        mockMvc.perform(post("/api/rooms/{roomId}/start", roomId).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200-1"))
                 .andExpect(jsonPath("$.msg").value("게임이 시작되었습니다."))
@@ -108,14 +107,12 @@ class RoundGameControllerTest {
                                 .roundWinCount(0)
                                 .isHost(false)
                                 .isWinner(false)
-                                .build()
-                ))
+                                .build()))
                 .build();
 
         given(roundService.getCurrentRound(roomId, userId)).willReturn(response);
 
-        mockMvc.perform(get("/api/rooms/{roomId}/rounds/current", roomId)
-                        .contentType(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/api/rooms/{roomId}/rounds/current", roomId).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200-2"))
                 .andExpect(jsonPath("$.msg").value("현재 라운드 조회에 성공했습니다."))
