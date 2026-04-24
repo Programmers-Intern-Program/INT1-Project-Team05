@@ -99,9 +99,7 @@ class GatewayKeywordGeneratorTest {
 
     private String invokeExtractContent(Object response) throws Exception {
         Method method = GatewayKeywordGenerator.class.getDeclaredMethod(
-                "extractContent",
-                backend.drawrace.domain.round.dto.gateway.GatewayChatResponse.class
-        );
+                "extractContent", backend.drawrace.domain.round.dto.gateway.GatewayChatResponse.class);
         method.setAccessible(true);
         return (String) method.invoke(gatewayKeywordGenerator, response);
     }

@@ -35,11 +35,11 @@ public class GatewayKeywordGenerator implements KeywordGenerator {
                 .temperature(0.8)
                 .messages(List.of(
                         GatewayChatRequest.systemMessage(buildSystemPrompt()),
-                        GatewayChatRequest.userMessage(buildUserPrompt())
-                ))
+                        GatewayChatRequest.userMessage(buildUserPrompt())))
                 .build();
 
-        GatewayChatResponse response = restClient.post()
+        GatewayChatResponse response = restClient
+                .post()
                 .uri("/chat/completions")
                 .body(request)
                 .retrieve()
@@ -100,8 +100,7 @@ public class GatewayKeywordGenerator implements KeywordGenerator {
      * AI 응답에서 코드블록, 따옴표, 접두 문구 등을 제거해 제시어만 남긴다.
      */
     private String sanitizeKeyword(String content) {
-        String cleaned = content
-                .replace("```json", "")
+        String cleaned = content.replace("```json", "")
                 .replace("```text", "")
                 .replace("```", "")
                 .replace("\"", "")
@@ -112,10 +111,7 @@ public class GatewayKeywordGenerator implements KeywordGenerator {
             cleaned = cleaned.substring(cleaned.indexOf(":") + 1).trim();
         }
 
-        cleaned = cleaned.lines()
-                .findFirst()
-                .orElse("")
-                .trim();
+        cleaned = cleaned.lines().findFirst().orElse("").trim();
 
         cleaned = cleaned.replaceAll("^\\d+\\.\\s*", "");
         cleaned = cleaned.replaceAll("\\s+", "");
