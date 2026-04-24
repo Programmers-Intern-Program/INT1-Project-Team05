@@ -42,4 +42,9 @@ public class User extends BaseEntity {
         this.profileImageUrl = profileImageUrl;
         this.stats = UserStats.builder().user(this).build();
     }
+
+    public void updateProfile(String nickname, String profileImageUrl) {
+        if (nickname != null) this.nickname = nickname;
+        if (profileImageUrl != null) this.profileImageUrl = profileImageUrl;
+    }
 }
