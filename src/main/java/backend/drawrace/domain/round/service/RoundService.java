@@ -9,7 +9,6 @@ import backend.drawrace.domain.room.entity.Participant;
 import backend.drawrace.domain.room.entity.Room;
 import backend.drawrace.domain.room.repository.ParticipantRepository;
 import backend.drawrace.domain.room.repository.RoomRepository;
-import backend.drawrace.domain.room.service.RoomService;
 import backend.drawrace.domain.round.dto.AiInferenceResponse;
 import backend.drawrace.domain.round.dto.CurrentRoundResponse;
 import backend.drawrace.domain.round.dto.RoundParticipantResponse;
@@ -40,7 +39,6 @@ public class RoundService {
     private final KeywordProvider keywordProvider;
     private final RoundValidator roundValidator;
     private final AiInferenceService aiInferenceService;
-    private final RoomService roomService;
 
     /**
      * 게임 시작 처리
@@ -50,7 +48,8 @@ public class RoundService {
      */
     @Transactional
     public RoundStartResponse startGame(Long roomId, Long userId) {
-        Room room = roomRepository.findById(roomId).orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 방입니다."));
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 방입니다."));
 
         long participantCount = participantRepository.countByRoomId(roomId);
 
@@ -74,44 +73,47 @@ public class RoundService {
     /**
      * 그림 제출 처리
      * - 현재 라운드와 참가자 유효성을 검증
+     * - 로그인한 사용자 본인의 참가 정보인지 검증
      * - 중복 제출을 막고 제출 기록을 저장
      * - 아직 전원 제출 전이면 대기 응답
      * - 전원 제출 완료면 라운드 승자를 선정하고 다음 상태를 결정
      */
     @Transactional
-    public SubmitDrawingResponse submitDrawing(Long roundId, SubmitDrawingRequest request) {
-        // 1. 현재 라운드 조회 및 진행 상태 검증
-        Round round =
-                roundRepository.findById(roundId).orElseThrow(() -> new ServiceException("404-2", "존재하지 않는 라운드입니다."));
+    public SubmitDrawingResponse submitDrawing(Long roundId, Long userId, SubmitDrawingRequest request) {
+        Round round = roundRepository.findById(roundId)
+                .orElseThrow(() -> new ServiceException("404-2", "존재하지 않는 라운드입니다."));
 
         roundValidator.validateRoundInProgress(round);
 
-        // 2. 방 소속 참가자인지 검증
+        // 방 소속 참가자인지 검증
         Participant participant = getValidParticipant(round, request.getParticipantId());
 
-        // 3. 이번 라운드 제출 대상인지 검증
+        // 로그인한 사용자 본인의 참가 정보인지 검증
+        roundValidator.validateParticipantOwner(participant, userId);
+
+        // 이번 라운드 제출 대상인지 검증
         boolean canPlay =
                 roundParticipantRepository.existsByRoundIdAndParticipantId(round.getId(), participant.getId());
         roundValidator.validateRoundParticipant(canPlay);
 
-        // 4. 이미 제출했는지 검증
+        // 이미 제출했는지 검증
         boolean alreadySubmitted =
                 roundSubmissionRepository.existsByRoundIdAndParticipantId(round.getId(), participant.getId());
         roundValidator.validateNotSubmitted(alreadySubmitted);
 
-        // 5. AI 판독
+        // AI 판독
         AiInferenceResponse aiResult = aiInferenceService.infer(request.getImageData(), round.getKeyword());
 
-        // 6. 제출 기록 저장
+        // 제출 기록 저장
         RoundSubmission submission = RoundSubmission.create(
                 round, participant, request.getImageData(), aiResult.getAiAnswer(), aiResult.getScore());
         roundSubmissionRepository.save(submission);
 
-        // 7. 현재 제출 수 확인
+        // 현재 제출 수 확인
         long submittedCount = roundSubmissionRepository.countByRoundId(round.getId());
         long totalParticipantCount = roundParticipantRepository.countByRoundId(round.getId());
 
-        // 8. 아직 전원 제출 전이면 대기 응답
+        // 아직 전원 제출 전이면 대기 응답
         if (submittedCount < totalParticipantCount) {
             return SubmitDrawingResponse.builder()
                     .roundId(round.getId())
@@ -125,19 +127,18 @@ public class RoundService {
                     .build();
         }
 
-        // 9. 전원 제출 완료면 라운드 종료 처리
+        // 전원 제출 완료면 라운드 종료 처리
         return handleRoundCompletion(round, aiResult, submittedCount, totalParticipantCount);
     }
 
     /**
      * 현재 진행 중인 라운드 조회
-     * - 방의 활성 라운드를 찾고
-     * - 해당 라운드 참가자 목록을 DTO로 변환해서 반환
      */
     @Transactional(readOnly = true)
-    public CurrentRoundResponse getCurrentRound(Long roomId) {
-        Round currentRound = roundRepository
-                .findByRoomIdAndIsActiveTrue(roomId)
+    public CurrentRoundResponse getCurrentRound(Long roomId, Long userId) {
+        validateRoomMember(roomId, userId);
+
+        Round currentRound = roundRepository.findByRoomIdAndIsActiveTrue(roomId)
                 .orElseThrow(() -> new ServiceException("404-3", "현재 진행 중인 라운드가 없습니다."));
 
         List<RoundParticipantResponse> participants =
@@ -148,13 +149,20 @@ public class RoundService {
         return CurrentRoundResponse.of(currentRound, participants);
     }
 
+    private void validateRoomMember(Long roomId, Long userId) {
+        boolean isRoomMember = participantRepository.findByRoomId(roomId).stream()
+                .anyMatch(participant -> participant.getUserId().getId().equals(userId));
+
+        if (!isRoomMember) {
+            throw new ServiceException("403-4", "해당 방 참가자만 현재 라운드를 조회할 수 있습니다.");
+        }
+    }
+
     /**
      * 현재 라운드의 방에 속한 참가자를 조회한다.
-     * - 방 소속이 아니면 예외 발생
      */
     private Participant getValidParticipant(Round round, Long participantId) {
-        return participantRepository
-                .findByIdAndRoomId(participantId, round.getRoom().getId())
+        return participantRepository.findByIdAndRoomId(participantId, round.getRoom().getId())
                 .orElseThrow(() -> new ServiceException("404-4", "해당 방에 속한 참가자가 아닙니다."));
     }
 
@@ -163,6 +171,7 @@ public class RoundService {
      */
     private SubmitDrawingResponse handleRoundCompletion(
             Round round, AiInferenceResponse aiResult, long submittedCount, long totalParticipantCount) {
+
         List<RoundSubmission> submissions = roundSubmissionRepository.findByRoundId(round.getId());
 
         RoundSubmission winnerSubmission = submissions.stream()
@@ -178,8 +187,6 @@ public class RoundService {
 
     /**
      * 라운드 종료 후 다음 상태를 결정한다.
-     * - 결승 라운드면 최종 우승 처리
-     * - 일반 라운드면 다음 라운드 / 마지막 라운드 처리 분기
      */
     private SubmitDrawingResponse handleAfterRoundFinished(
             Round round,
@@ -187,14 +194,12 @@ public class RoundService {
             long submittedCount,
             long totalParticipantCount,
             Participant roundWinner) {
+
         Room room = round.getRoom();
 
-        // 결승 라운드면 바로 최종 우승
         if (round.isTiebreaker()) {
             roundWinner.markWinner();
-            // room.finishGame();
-            // recordGameResults(room, roundWinner);
-            roomService.finishGame(room.getId());
+            room.finishGame();
 
             return SubmitDrawingResponse.builder()
                     .roundId(round.getId())
@@ -210,7 +215,6 @@ public class RoundService {
                     .build();
         }
 
-        // 일반 라운드 + 아직 다음 라운드가 남아 있으면 다음 라운드 생성
         if (round.getRoundNumber() < room.getTotalRounds()) {
             Round nextRound = createNextRound(room, round.getRoundNumber() + 1);
 
@@ -233,14 +237,11 @@ public class RoundService {
                     .build();
         }
 
-        // 마지막 일반 라운드면 최종 우승 또는 결승 생성 처리
         return handleLastNormalRound(round, aiResult, submittedCount, totalParticipantCount, roundWinner);
     }
 
     /**
      * 마지막 일반 라운드 처리
-     * - 최고 점수자가 1명이면 최종 우승
-     * - 여러 명이면 결승 라운드 생성
      */
     private SubmitDrawingResponse handleLastNormalRound(
             Round round,
@@ -248,16 +249,14 @@ public class RoundService {
             long submittedCount,
             long totalParticipantCount,
             Participant roundWinner) {
+
         Room room = round.getRoom();
         List<Participant> topScorers = findTopScorers(room.getId());
 
-        // 단독 우승
         if (topScorers.size() == 1) {
             Participant finalWinner = topScorers.get(0);
-            // finalWinner.markWinner();
-            // room.finishGame();
-            // recordGameResults(room, finalWinner);
-            roomService.finishGame(room.getId());
+            finalWinner.markWinner();
+            room.finishGame();
 
             return SubmitDrawingResponse.builder()
                     .roundId(round.getId())
@@ -273,7 +272,6 @@ public class RoundService {
                     .build();
         }
 
-        // 동점이면 결승 라운드 생성
         Round tieBreakerRound = createTieBreakerRound(room, round.getRoundNumber() + 1);
         saveRoundParticipants(tieBreakerRound, topScorers);
 
@@ -293,11 +291,6 @@ public class RoundService {
                 .build();
     }
 
-    /**
-     * 특정 라운드의 참가자 명단 저장
-     * - 일반 라운드면 전원
-     * - 결승 라운드면 동점자만 등록
-     */
     private void saveRoundParticipants(Round round, List<Participant> participants) {
         List<RoundParticipant> roundParticipants = participants.stream()
                 .map(participant -> RoundParticipant.of(round, participant))
@@ -306,9 +299,6 @@ public class RoundService {
         roundParticipantRepository.saveAll(roundParticipants);
     }
 
-    /**
-     * 다음 일반 라운드 생성 및 시작
-     */
     private Round createNextRound(Room room, int nextRoundNumber) {
         String keyword = keywordProvider.getRandomKeyword();
 
@@ -318,9 +308,6 @@ public class RoundService {
         return roundRepository.save(nextRound);
     }
 
-    /**
-     * 결승 라운드 생성 및 시작
-     */
     private Round createTieBreakerRound(Room room, int nextRoundNumber) {
         String keyword = keywordProvider.getRandomKeyword();
 
@@ -330,24 +317,6 @@ public class RoundService {
         return roundRepository.save(tieBreakerRound);
     }
 
-    /**
-     * 게임 종료 시 전원 totalGameCount +1, 최종 우승자 winGameCount +1
-     */
-    /*
-    private void recordGameResults(Room room, Participant winner) {
-        List<Participant> participants = participantRepository.findByRoomId(room.getId());
-
-        participants.forEach(p -> p.getUserId().getStats().recordGame());
-
-        winner.getUserId().getStats().recordWin();
-    }
-     */
-    /**
-     * 현재 방에서 최고 점수자 목록 조회
-     * - 최종 우승 판정
-     * - 결승 진출자 선정
-     * 에 사용
-     */
     private List<Participant> findTopScorers(Long roomId) {
         List<Participant> participants = participantRepository.findByRoomId(roomId);
 

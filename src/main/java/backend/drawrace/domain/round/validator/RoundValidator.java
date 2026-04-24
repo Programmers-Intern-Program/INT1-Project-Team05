@@ -1,5 +1,6 @@
 package backend.drawrace.domain.round.validator;
 
+import backend.drawrace.domain.room.entity.Participant;
 import java.util.Optional;
 
 import org.springframework.stereotype.Component;
@@ -58,6 +59,12 @@ public class RoundValidator {
     private void validateNoActiveRound(Optional<Round> activeRound) {
         if (activeRound.isPresent()) {
             throw new ServiceException("400-5", "이미 진행 중인 라운드가 존재합니다.");
+        }
+    }
+
+    public void validateParticipantOwner(Participant participant, Long userId) {
+        if (!participant.getUserId().getId().equals(userId)) {
+            throw new ServiceException("403-3", "본인 참가 정보로만 제출할 수 있습니다.");
         }
     }
 }
