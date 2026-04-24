@@ -10,7 +10,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import backend.drawrace.domain.user.dto.CreateUserRequest;
+import backend.drawrace.domain.user.dto.UpdateUserRequest;
 import backend.drawrace.domain.user.dto.UserInfoResponse;
+import backend.drawrace.domain.user.dto.UserSearchResponse;
 import backend.drawrace.global.exception.ServiceException;
 
 @SpringBootTest
@@ -65,5 +67,88 @@ class UserServiceTest {
         assertThatThrownBy(() -> userService.deleteUser(999L))
                 .isInstanceOf(ServiceException.class)
                 .hasFieldOrPropertyWithValue("resultCode", "404-1");
+    }
+
+    @Test
+    @DisplayName("닉네임으로_유저_검색_성공")
+    void searchByNickname_success() {
+        Long savedId = createTestUser();
+
+        UserSearchResponse response = userService.searchByNickname("테스터");
+
+        assertThat(response.id()).isEqualTo(savedId);
+        assertThat(response.nickname()).isEqualTo("테스터");
+    }
+
+    @Test
+    @DisplayName("닉네임으로_유저_검색_실패_존재하지_않는_닉네임")
+    void searchByNickname_fail_not_found() {
+        assertThatThrownBy(() -> userService.searchByNickname("없는닉네임"))
+                .isInstanceOf(ServiceException.class)
+                .hasFieldOrPropertyWithValue("resultCode", "404-1");
+    }
+
+    @Test
+    @DisplayName("프로필_수정_성공_닉네임만_변경")
+    void updateProfile_success_nickname_only() {
+        Long savedId = createTestUser();
+
+        UserInfoResponse response = userService.updateProfile(savedId, new UpdateUserRequest("새닉네임", null));
+
+        assertThat(response.nickname()).isEqualTo("새닉네임");
+        assertThat(response.profileImageUrl()).isNull();
+    }
+
+    @Test
+    @DisplayName("프로필_수정_성공_프로필이미지만_변경")
+    void updateProfile_success_profileImage_only() {
+        Long savedId = createTestUser();
+
+        UserInfoResponse response =
+                userService.updateProfile(savedId, new UpdateUserRequest(null, "https://example.com/image.png"));
+
+        assertThat(response.nickname()).isEqualTo("테스터");
+        assertThat(response.profileImageUrl()).isEqualTo("https://example.com/image.png");
+    }
+
+    @Test
+    @DisplayName("프로필_수정_성공_닉네임_프로필이미지_모두_변경")
+    void updateProfile_success_all_fields() {
+        Long savedId = createTestUser();
+
+        UserInfoResponse response =
+                userService.updateProfile(savedId, new UpdateUserRequest("새닉네임", "https://example.com/image.png"));
+
+        assertThat(response.nickname()).isEqualTo("새닉네임");
+        assertThat(response.profileImageUrl()).isEqualTo("https://example.com/image.png");
+    }
+
+    @Test
+    @DisplayName("프로필_수정_실패_존재하지_않는_유저")
+    void updateProfile_fail_not_found() {
+        assertThatThrownBy(() -> userService.updateProfile(999L, new UpdateUserRequest("새닉네임", null)))
+                .isInstanceOf(ServiceException.class)
+                .hasFieldOrPropertyWithValue("resultCode", "404-1");
+    }
+
+    @Test
+    @DisplayName("프로필_수정_실패_닉네임_중복")
+    void updateProfile_fail_duplicate_nickname() {
+        Long savedId = createTestUser();
+        authService.signup(new CreateUserRequest("other@example.com", "password123", "다른유저"));
+
+        assertThatThrownBy(() -> userService.updateProfile(savedId, new UpdateUserRequest("다른유저", null)))
+                .isInstanceOf(ServiceException.class)
+                .hasFieldOrPropertyWithValue("resultCode", "409-1");
+    }
+
+    @Test
+    @DisplayName("프로필_수정_성공_본인_닉네임_그대로_사용")
+    void updateProfile_success_same_nickname() {
+        Long savedId = createTestUser();
+
+        UserInfoResponse response = userService.updateProfile(savedId, new UpdateUserRequest("테스터", null));
+
+        assertThat(response.nickname()).isEqualTo("테스터");
     }
 }

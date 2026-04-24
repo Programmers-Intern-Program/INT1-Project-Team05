@@ -3,7 +3,9 @@ package backend.drawrace.domain.user.service;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import backend.drawrace.domain.user.dto.UpdateUserRequest;
 import backend.drawrace.domain.user.dto.UserInfoResponse;
+import backend.drawrace.domain.user.dto.UserSearchResponse;
 import backend.drawrace.domain.user.entity.User;
 import backend.drawrace.domain.user.repository.RefreshTokenRepository;
 import backend.drawrace.domain.user.repository.UserRepository;
@@ -33,6 +35,29 @@ public class UserServiceImpl implements UserService {
         return userRepository
                 .findById(userId)
                 .orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 유저입니다. ID: " + userId));
+    }
+
+    @Override
+    public UserSearchResponse searchByNickname(String nickname) {
+        User user = userRepository
+                .findByNickname(nickname)
+                .orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 유저입니다."));
+        return UserSearchResponse.from(user);
+    }
+
+    @Override
+    @Transactional
+    public UserInfoResponse updateProfile(Long userId, UpdateUserRequest request) {
+        User user = userRepository
+                .findById(userId)
+                .orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 유저입니다. ID: " + userId));
+
+        if (request.nickname() != null && userRepository.existsByNicknameAndIdNot(request.nickname(), userId)) {
+            throw new ServiceException("409-1", "이미 사용 중인 닉네임입니다.");
+        }
+
+        user.updateProfile(request.nickname(), request.profileImageUrl());
+        return UserInfoResponse.from(user);
     }
 
     @Override
