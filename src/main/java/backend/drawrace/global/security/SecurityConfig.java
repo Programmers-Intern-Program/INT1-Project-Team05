@@ -40,6 +40,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(
                         auth -> auth.requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/reissue")
                                 .permitAll()
+                                // 웹소켓 연결 시작 주소는 허용 (인증은 인터셉터에서 수행)
+                                .requestMatchers("/ws-draw/**")
+                                .permitAll()
                                 .anyRequest()
                                 .authenticated())
                 .addFilterBefore(customAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);

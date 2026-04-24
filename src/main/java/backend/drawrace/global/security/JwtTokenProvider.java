@@ -9,8 +9,11 @@ import javax.crypto.SecretKey;
 import jakarta.annotation.PostConstruct;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -32,6 +35,20 @@ public class JwtTokenProvider {
     @PostConstruct
     protected void init() {
         this.key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
+    }
+
+    // 토큰에서 인증 정보를 추출하여 Authentication 객체를 반환합니다.
+    // StompHandler에서 인증된 사용자를 식별하기 위해 사용됩니다.
+    public Authentication getAuthentication(String token) {
+        Claims claims =
+                Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
+
+        Long userId = claims.get("userId", Long.class);
+        String email = claims.getSubject();
+
+        SecurityUser principal = new SecurityUser(userId, email);
+
+        return new UsernamePasswordAuthenticationToken(principal, "", principal.getAuthorities());
     }
 
     public String createAccessToken(Long userId, String email) {
