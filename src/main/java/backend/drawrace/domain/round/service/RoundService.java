@@ -150,8 +150,7 @@ public class RoundService {
     }
 
     private void validateRoomMember(Long roomId, Long userId) {
-        boolean isRoomMember = participantRepository.findByRoomId(roomId).stream()
-                .anyMatch(participant -> participant.getUserId().getId().equals(userId));
+        boolean isRoomMember = participantRepository.existsByRoomIdAndUserId_Id(roomId, userId);
 
         if (!isRoomMember) {
             throw new ServiceException("403-4", "해당 방 참가자만 현재 라운드를 조회할 수 있습니다.");
