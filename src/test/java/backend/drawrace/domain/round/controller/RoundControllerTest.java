@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.lang.reflect.Field;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import backend.drawrace.domain.round.dto.SubmitDrawingRequest;
 import backend.drawrace.domain.round.dto.SubmitDrawingResponse;
 import backend.drawrace.domain.round.service.RoundService;
+import backend.drawrace.global.security.SecurityUser;
 
 @WebMvcTest(RoundController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -36,10 +40,21 @@ class RoundControllerTest {
     @MockBean
     private RoundService roundService;
 
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
     @Test
     @DisplayName("그림 제출 요청 성공")
     void submitDrawing_success() throws Exception {
         Long roundId = 10L;
+        Long userId = 1L;
+
+        SecurityUser securityUser = new SecurityUser(userId, "test@test.com");
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(securityUser, null, securityUser.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
 
         SubmitDrawingRequest request = new SubmitDrawingRequest();
         setField(request, "participantId", 100L);
@@ -61,25 +76,27 @@ class RoundControllerTest {
                 .finalWinnerParticipantId(null)
                 .build();
 
-        given(roundService.submitDrawing(eq(roundId), any(SubmitDrawingRequest.class)))
+        given(roundService.submitDrawing(eq(roundId), eq(userId), any(SubmitDrawingRequest.class)))
                 .willReturn(response);
 
         mockMvc.perform(post("/api/rounds/{roundId}/submit", roundId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.roundId").value(10))
-                .andExpect(jsonPath("$.aiAnswer").value("사과"))
-                .andExpect(jsonPath("$.score").value(0.95))
-                .andExpect(jsonPath("$.submittedCount").value(2))
-                .andExpect(jsonPath("$.totalParticipantCount").value(2))
-                .andExpect(jsonPath("$.roundFinished").value(true))
-                .andExpect(jsonPath("$.gameFinished").value(false))
-                .andExpect(jsonPath("$.tieBreakerStarted").value(false))
-                .andExpect(jsonPath("$.roundWinnerParticipantId").value(100))
-                .andExpect(jsonPath("$.nextRoundId").value(20))
-                .andExpect(jsonPath("$.nextRoundNumber").value(2))
-                .andExpect(jsonPath("$.nextRoundTieBreaker").value(false));
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("그림 제출이 완료되었습니다."))
+                .andExpect(jsonPath("$.data.roundId").value(10))
+                .andExpect(jsonPath("$.data.aiAnswer").value("사과"))
+                .andExpect(jsonPath("$.data.score").value(0.95))
+                .andExpect(jsonPath("$.data.submittedCount").value(2))
+                .andExpect(jsonPath("$.data.totalParticipantCount").value(2))
+                .andExpect(jsonPath("$.data.roundFinished").value(true))
+                .andExpect(jsonPath("$.data.gameFinished").value(false))
+                .andExpect(jsonPath("$.data.tieBreakerStarted").value(false))
+                .andExpect(jsonPath("$.data.roundWinnerParticipantId").value(100))
+                .andExpect(jsonPath("$.data.nextRoundId").value(20))
+                .andExpect(jsonPath("$.data.nextRoundNumber").value(2))
+                .andExpect(jsonPath("$.data.nextRoundTieBreaker").value(false));
     }
 
     private void setField(Object target, String fieldName, Object value) throws Exception {

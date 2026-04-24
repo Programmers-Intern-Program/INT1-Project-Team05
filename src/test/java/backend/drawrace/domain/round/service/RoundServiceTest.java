@@ -8,8 +8,6 @@ import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Optional;
 
-import jakarta.persistence.EntityNotFoundException;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,7 +20,6 @@ import backend.drawrace.domain.room.entity.Participant;
 import backend.drawrace.domain.room.entity.Room;
 import backend.drawrace.domain.room.repository.ParticipantRepository;
 import backend.drawrace.domain.room.repository.RoomRepository;
-import backend.drawrace.domain.room.service.RoomService;
 import backend.drawrace.domain.round.dto.AiInferenceResponse;
 import backend.drawrace.domain.round.dto.CurrentRoundResponse;
 import backend.drawrace.domain.round.dto.RoundStartResponse;
@@ -37,7 +34,7 @@ import backend.drawrace.domain.round.repository.RoundRepository;
 import backend.drawrace.domain.round.repository.RoundSubmissionRepository;
 import backend.drawrace.domain.round.validator.RoundValidator;
 import backend.drawrace.domain.user.entity.User;
-import backend.drawrace.domain.user.entity.UserStats;
+import backend.drawrace.global.exception.ServiceException;
 
 @ExtendWith(MockitoExtension.class)
 class RoundServiceTest {
@@ -66,9 +63,6 @@ class RoundServiceTest {
     @Mock
     private AiInferenceService aiInferenceService;
 
-    @Mock
-    private RoomService roomService;
-
     @InjectMocks
     private RoundService roundService;
 
@@ -76,8 +70,9 @@ class RoundServiceTest {
     @DisplayName("게임 시작 성공")
     void startGame_success() throws Exception {
         Long roomId = 1L;
-        Long hostId = 1L; // 방장 ID
-        Room room = createRoom(roomId, false, 1L);
+        Long hostId = 1L;
+
+        Room room = createRoom(roomId, false, hostId);
         Participant participant1 = createParticipant(100L, room, 0);
         Participant participant2 = createParticipant(101L, room, 0);
 
@@ -113,10 +108,11 @@ class RoundServiceTest {
     void startGame_roomNotFound() {
         Long roomId = 1L;
         Long userId = 1L;
+
         given(roomRepository.findById(roomId)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> roundService.startGame(roomId, userId))
-                .isInstanceOf(EntityNotFoundException.class)
+                .isInstanceOf(ServiceException.class)
                 .hasMessageContaining("존재하지 않는 방입니다");
     }
 
@@ -143,7 +139,7 @@ class RoundServiceTest {
         given(roundSubmissionRepository.countByRoundId(roundId)).willReturn(1L);
         given(roundParticipantRepository.countByRoundId(roundId)).willReturn(2L);
 
-        SubmitDrawingResponse response = roundService.submitDrawing(roundId, request);
+        SubmitDrawingResponse response = roundService.submitDrawing(roundId, 1L, request);
 
         assertThat(response.getRoundId()).isEqualTo(roundId);
         assertThat(response.getAiAnswer()).isEqualTo("사과");
@@ -189,16 +185,15 @@ class RoundServiceTest {
         given(roundSubmissionRepository.countByRoundId(roundId)).willReturn(2L);
         given(roundParticipantRepository.countByRoundId(roundId)).willReturn(2L);
         given(roundSubmissionRepository.findByRoundId(roundId)).willReturn(List.of(currentSubmission, otherSubmission));
-
+        given(keywordProvider.getRandomKeyword()).willReturn("자동차");
+        given(participantRepository.findByRoomId(roomId)).willReturn(List.of(participant, participant2));
         given(roundRepository.save(any(Round.class))).willAnswer(invocation -> {
             Round saved = invocation.getArgument(0);
             setField(saved, "id", 20L);
             return saved;
         });
-        given(keywordProvider.getRandomKeyword()).willReturn("자동차");
-        given(participantRepository.findByRoomId(roomId)).willReturn(List.of(participant, participant2));
 
-        SubmitDrawingResponse response = roundService.submitDrawing(roundId, request);
+        SubmitDrawingResponse response = roundService.submitDrawing(roundId, 1L, request);
 
         assertThat(response.getRoundId()).isEqualTo(roundId);
         assertThat(response.isRoundFinished()).isTrue();
@@ -229,15 +224,6 @@ class RoundServiceTest {
         setField(room, "totalRounds", (short) 3);
 
         Round round = createInProgressRound(roundId, room, 3, "사과");
-
-        User winnerUser = mock(User.class);
-        UserStats winnerStats = mock(UserStats.class);
-        lenient().when(winnerUser.getStats()).thenReturn(winnerStats);
-
-        User loserUser = mock(User.class);
-        UserStats loserStats = mock(UserStats.class);
-        lenient().when(loserUser.getStats()).thenReturn(loserStats);
-
         Participant participant = createParticipant(participantId, room, 1);
         Participant participant2 = createParticipant(101L, room, 1);
 
@@ -258,18 +244,7 @@ class RoundServiceTest {
         given(roundSubmissionRepository.findByRoundId(roundId)).willReturn(List.of(currentSubmission, otherSubmission));
         given(participantRepository.findByRoomId(roomId)).willReturn(List.of(participant, participant2));
 
-        // findTopScorers 로직이 단독 우승자를 찾을 수 있도록 Mock 설정
-        Participant winner = Participant.builder().userId(winnerUser).room(room).build();
-        setField(winner, "id", participantId);
-        setField(winner, "roundWinCount", 3);
-
-        Participant loser = Participant.builder().userId(loserUser).room(room).build();
-        setField(loser, "id", 2L);
-        setField(loser, "roundWinCount", 1);
-
-        given(participantRepository.findByRoomId(roomId)).willReturn(List.of(winner, loser));
-
-        SubmitDrawingResponse response = roundService.submitDrawing(roundId, request);
+        SubmitDrawingResponse response = roundService.submitDrawing(roundId, 1L, request);
 
         assertThat(response.isRoundFinished()).isTrue();
         assertThat(response.isGameFinished()).isTrue();
@@ -278,18 +253,8 @@ class RoundServiceTest {
         assertThat(response.getFinalWinnerParticipantId()).isEqualTo(participantId);
 
         assertThat(participant.getRoundWinCount()).isEqualTo(2);
-
-        verify(roomService, times(1)).finishGame(roomId);
-        /*
         assertThat(participant.isWinner()).isTrue();
         assertThat(room.isPlaying()).isFalse();
-
-        then(participant.getUserId().getStats()).should().recordGame();
-        then(participant.getUserId().getStats()).should().recordWin();
-        then(participant2.getUserId().getStats()).should().recordGame();
-        then(participant2.getUserId().getStats()).shouldHaveNoMoreInteractions();
-
-         */
     }
 
     @Test
@@ -321,7 +286,6 @@ class RoundServiceTest {
         given(roundSubmissionRepository.countByRoundId(roundId)).willReturn(2L);
         given(roundParticipantRepository.countByRoundId(roundId)).willReturn(2L);
         given(roundSubmissionRepository.findByRoundId(roundId)).willReturn(List.of(currentSubmission, otherSubmission));
-
         given(participantRepository.findByRoomId(roomId)).willReturn(List.of(participant, participant2));
         given(keywordProvider.getRandomKeyword()).willReturn("자동차");
         given(roundRepository.save(any(Round.class))).willAnswer(invocation -> {
@@ -330,7 +294,7 @@ class RoundServiceTest {
             return saved;
         });
 
-        SubmitDrawingResponse response = roundService.submitDrawing(roundId, request);
+        SubmitDrawingResponse response = roundService.submitDrawing(roundId, 1L, request);
 
         assertThat(response.isRoundFinished()).isTrue();
         assertThat(response.isGameFinished()).isFalse();
@@ -377,9 +341,7 @@ class RoundServiceTest {
         given(roundParticipantRepository.countByRoundId(roundId)).willReturn(2L);
         given(roundSubmissionRepository.findByRoundId(roundId)).willReturn(List.of(currentSubmission, otherSubmission));
 
-        //     given(participantRepository.findByRoomId(roomId)).willReturn(List.of(participant, participant2));
-
-        SubmitDrawingResponse response = roundService.submitDrawing(roundId, request);
+        SubmitDrawingResponse response = roundService.submitDrawing(roundId, 1L, request);
 
         assertThat(response.isRoundFinished()).isTrue();
         assertThat(response.isGameFinished()).isTrue();
@@ -389,16 +351,7 @@ class RoundServiceTest {
 
         assertThat(participant.getRoundWinCount()).isEqualTo(3);
         assertThat(participant.isWinner()).isTrue();
-        verify(roomService, times(1)).finishGame(roomId);
-        /*
         assertThat(room.isPlaying()).isFalse();
-
-        then(participant.getUserId().getStats()).should().recordGame();
-        then(participant.getUserId().getStats()).should().recordWin();
-        then(participant2.getUserId().getStats()).should().recordGame();
-        then(participant2.getUserId().getStats()).shouldHaveNoMoreInteractions();
-
-         */
     }
 
     @Test
@@ -421,8 +374,12 @@ class RoundServiceTest {
         given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, participantId))
                 .willReturn(true);
 
-        assertThatThrownBy(() -> roundService.submitDrawing(roundId, request))
-                .isInstanceOf(IllegalStateException.class)
+        willThrow(new ServiceException("400-2", "이미 제출을 완료한 참가자입니다."))
+                .given(roundValidator)
+                .validateNotSubmitted(true);
+
+        assertThatThrownBy(() -> roundService.submitDrawing(roundId, 1L, request))
+                .isInstanceOf(ServiceException.class)
                 .hasMessageContaining("이미 제출을 완료한 참가자입니다");
     }
 
@@ -434,8 +391,8 @@ class RoundServiceTest {
 
         given(roundRepository.findById(roundId)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> roundService.submitDrawing(roundId, request))
-                .isInstanceOf(EntityNotFoundException.class)
+        assertThatThrownBy(() -> roundService.submitDrawing(roundId, 1L, request))
+                .isInstanceOf(ServiceException.class)
                 .hasMessageContaining("존재하지 않는 라운드입니다");
     }
 
@@ -453,11 +410,12 @@ class RoundServiceTest {
         RoundParticipant roundParticipant1 = createRoundParticipant(1L, round, participant1);
         RoundParticipant roundParticipant2 = createRoundParticipant(2L, round, participant2);
 
+        given(participantRepository.existsByRoomIdAndUserId_Id(roomId, 1L)).willReturn(true);
         given(roundRepository.findByRoomIdAndIsActiveTrue(roomId)).willReturn(Optional.of(round));
         given(roundParticipantRepository.findByRoundId(roundId))
                 .willReturn(List.of(roundParticipant1, roundParticipant2));
 
-        CurrentRoundResponse response = roundService.getCurrentRound(roomId);
+        CurrentRoundResponse response = roundService.getCurrentRound(roomId, 1L);
 
         assertThat(response.getRoomId()).isEqualTo(roomId);
         assertThat(response.getRoundId()).isEqualTo(roundId);
@@ -472,11 +430,52 @@ class RoundServiceTest {
     @DisplayName("현재 진행 중인 라운드가 없으면 예외가 발생한다")
     void getCurrentRound_fail_noActiveRound() {
         Long roomId = 1L;
+
+        given(participantRepository.existsByRoomIdAndUserId_Id(roomId, 1L)).willReturn(true);
         given(roundRepository.findByRoomIdAndIsActiveTrue(roomId)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> roundService.getCurrentRound(roomId))
-                .isInstanceOf(EntityNotFoundException.class)
+        assertThatThrownBy(() -> roundService.getCurrentRound(roomId, 1L))
+                .isInstanceOf(ServiceException.class)
                 .hasMessageContaining("현재 진행 중인 라운드가 없습니다");
+    }
+
+    @Test
+    @DisplayName("본인 참가 정보가 아니면 그림 제출이 불가능하다")
+    void submitDrawing_forbidden_notOwner() throws Exception {
+        Long roomId = 1L;
+        Long roundId = 10L;
+        Long loginUserId = 1L;
+        Long participantId = 100L;
+
+        Room room = createRoom(roomId, true, 1L);
+        Round round = createInProgressRound(roundId, room, 1, "사과");
+        Participant participant = createParticipant(participantId, room, 0);
+
+        SubmitDrawingRequest request = createSubmitDrawingRequest(participantId, "dummy-image");
+
+        given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
+        given(participantRepository.findByIdAndRoomId(participantId, roomId)).willReturn(Optional.of(participant));
+
+        willThrow(new ServiceException("403-3", "본인 참가 정보로만 제출할 수 있습니다."))
+                .given(roundValidator)
+                .validateParticipantOwner(participant, loginUserId);
+
+        assertThatThrownBy(() -> roundService.submitDrawing(roundId, loginUserId, request))
+                .isInstanceOf(ServiceException.class)
+                .hasMessageContaining("본인 참가 정보로만 제출할 수 있습니다");
+    }
+
+    @Test
+    @DisplayName("방 참가자가 아니면 현재 라운드를 조회할 수 없다")
+    void getCurrentRound_forbidden_notRoomMember() {
+        Long roomId = 1L;
+        Long userId = 99L;
+
+        given(participantRepository.existsByRoomIdAndUserId_Id(roomId, userId)).willReturn(false);
+
+        assertThatThrownBy(() -> roundService.getCurrentRound(roomId, userId))
+                .isInstanceOf(ServiceException.class)
+                .hasMessageContaining("해당 방 참가자만 현재 라운드를 조회할 수 있습니다");
     }
 
     private Room createRoom(Long id, boolean isPlaying, Long hostId) throws Exception {
@@ -506,15 +505,13 @@ class RoundServiceTest {
         return round;
     }
 
-    private Participant createParticipant(Long id, Room room, int roundWinCount) throws Exception {
+    private Participant createParticipant(Long participantId, Room room, int roundWinCount) throws Exception {
         User user = mock(User.class);
-        UserStats stats = mock(UserStats.class);
-        lenient().when(user.getStats()).thenReturn(stats);
 
         Participant participant =
                 Participant.builder().userId(user).room(room).isHost(false).build();
 
-        setField(participant, "id", id);
+        setField(participant, "id", participantId);
         setField(participant, "roundWinCount", roundWinCount);
         return participant;
     }
