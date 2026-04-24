@@ -10,13 +10,14 @@ import org.junit.jupiter.api.Test;
 
 import backend.drawrace.domain.room.entity.Room;
 import backend.drawrace.domain.round.entity.Round;
+import backend.drawrace.global.exception.ServiceException;
 
 class RoundValidatorTest {
 
     private final RoundValidator roundValidator = new RoundValidator();
 
     @Test
-    @DisplayName("게임 시작 검증 성공 ")
+    @DisplayName("게임 시작 검증 성공")
     void validateStartGame_success() throws Exception {
         Room room = createRoom(1L, false, 1L);
 
@@ -27,11 +28,10 @@ class RoundValidatorTest {
     @Test
     @DisplayName("방장이 아닌 유저가 게임 시작을 요청하면 예외 발생")
     void validateStartGame_notHost() throws Exception {
-        Room room = createRoom(1L, false, 1L); // hostId = 1L
+        Room room = createRoom(1L, false, 1L);
 
-        // userId가 2L이면 예외 발생
         assertThatThrownBy(() -> roundValidator.validateStartGame(room, 2L, Optional.empty(), 2L))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(ServiceException.class)
                 .hasMessageContaining("방장만 게임을 시작할 수 있습니다");
     }
 
@@ -41,8 +41,8 @@ class RoundValidatorTest {
         Room room = createRoom(1L, true, 1L);
 
         assertThatThrownBy(() -> roundValidator.validateStartGame(room, 2L, Optional.empty(), 1L))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("이미 게임이 진행 중");
+                .isInstanceOf(ServiceException.class)
+                .hasMessageContaining("이미 게임이 진행 중인 방입니다");
     }
 
     @Test
@@ -51,8 +51,8 @@ class RoundValidatorTest {
         Room room = createRoom(1L, false, 1L);
 
         assertThatThrownBy(() -> roundValidator.validateStartGame(room, 1L, Optional.empty(), 1L))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("최소 2명");
+                .isInstanceOf(ServiceException.class)
+                .hasMessageContaining("최소 2명 이상");
     }
 
     @Test
@@ -62,9 +62,36 @@ class RoundValidatorTest {
         Round round = Round.create(room, 1, "사과");
         setField(round, "id", 99L);
 
-        assertThatThrownBy(() -> roundValidator.validateStartGame(room, 2L, Optional.of(round), 1l))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("이미 진행 중인 라운드");
+        assertThatThrownBy(() -> roundValidator.validateStartGame(room, 2L, Optional.of(round), 1L))
+                .isInstanceOf(ServiceException.class)
+                .hasMessageContaining("이미 진행 중인 라운드가 존재합니다");
+    }
+
+    @Test
+    @DisplayName("진행 중인 라운드가 아니면 예외")
+    void validateRoundInProgress_fail() throws Exception {
+        Room room = createRoom(1L, true, 1L);
+        Round round = Round.create(room, 1, "사과");
+
+        assertThatThrownBy(() -> roundValidator.validateRoundInProgress(round))
+                .isInstanceOf(ServiceException.class)
+                .hasMessageContaining("진행 중인 라운드가 아닙니다");
+    }
+
+    @Test
+    @DisplayName("이번 라운드 참가 대상이 아니면 예외")
+    void validateRoundParticipant_fail() {
+        assertThatThrownBy(() -> roundValidator.validateRoundParticipant(false))
+                .isInstanceOf(ServiceException.class)
+                .hasMessageContaining("이번 라운드 참가 대상이 아닙니다");
+    }
+
+    @Test
+    @DisplayName("이미 제출했으면 예외")
+    void validateNotSubmitted_fail() {
+        assertThatThrownBy(() -> roundValidator.validateNotSubmitted(true))
+                .isInstanceOf(ServiceException.class)
+                .hasMessageContaining("이미 제출을 완료한 참가자입니다");
     }
 
     private Room createRoom(Long id, boolean isPlaying, Long hostId) throws Exception {

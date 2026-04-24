@@ -49,7 +49,8 @@ class RoundGameControllerTest {
 
         given(roundService.startGame(roomId, 1L)).willReturn(response);
 
-        mockMvc.perform(post("/api/rooms/{roomId}/start", roomId).contentType(MediaType.APPLICATION_JSON))
+        mockMvc.perform(post("/api/rooms/{roomId}/start", roomId)
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200-1"))
                 .andExpect(jsonPath("$.msg").value("게임이 시작되었습니다."))
@@ -86,14 +87,16 @@ class RoundGameControllerTest {
                                 .roundWinCount(0)
                                 .isHost(false)
                                 .isWinner(false)
-                                .build()))
+                                .build()
+                ))
                 .build();
 
         given(roundService.getCurrentRound(roomId)).willReturn(response);
 
-        mockMvc.perform(get("/api/rooms/{roomId}/rounds/current", roomId).contentType(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/api/rooms/{roomId}/rounds/current", roomId)
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.resultCode").value("200-2"))
                 .andExpect(jsonPath("$.msg").value("현재 라운드 조회에 성공했습니다."))
                 .andExpect(jsonPath("$.data.roomId").value(1))
                 .andExpect(jsonPath("$.data.roundId").value(10))
@@ -101,6 +104,10 @@ class RoundGameControllerTest {
                 .andExpect(jsonPath("$.data.keyword").value("사과"))
                 .andExpect(jsonPath("$.data.status").value("IN_PROGRESS"))
                 .andExpect(jsonPath("$.data.tiebreaker").value(false))
-                .andExpect(jsonPath("$.data.participants.length()").value(2));
+                .andExpect(jsonPath("$.data.participants.length()").value(2))
+                .andExpect(jsonPath("$.data.participants[0].participantId").value(100))
+                .andExpect(jsonPath("$.data.participants[0].roundWinCount").value(1))
+                .andExpect(jsonPath("$.data.participants[0].host").value(true))
+                .andExpect(jsonPath("$.data.participants[0].winner").value(false));
     }
 }
