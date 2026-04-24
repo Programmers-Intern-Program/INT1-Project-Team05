@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.lang.reflect.Field;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import backend.drawrace.domain.round.dto.SubmitDrawingRequest;
 import backend.drawrace.domain.round.dto.SubmitDrawingResponse;
 import backend.drawrace.domain.round.service.RoundService;
+import backend.drawrace.global.security.SecurityUser;
 
 @WebMvcTest(RoundController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -36,10 +40,21 @@ class RoundControllerTest {
     @MockBean
     private RoundService roundService;
 
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
     @Test
     @DisplayName("그림 제출 요청 성공")
     void submitDrawing_success() throws Exception {
         Long roundId = 10L;
+        Long userId = 1L;
+
+        SecurityUser securityUser = new SecurityUser(userId, "test@test.com");
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(securityUser, null, securityUser.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
 
         SubmitDrawingRequest request = new SubmitDrawingRequest();
         setField(request, "participantId", 100L);
@@ -61,7 +76,7 @@ class RoundControllerTest {
                 .finalWinnerParticipantId(null)
                 .build();
 
-        given(roundService.submitDrawing(eq(roundId), any(SubmitDrawingRequest.class)))
+        given(roundService.submitDrawing(eq(roundId), eq(userId), any(SubmitDrawingRequest.class)))
                 .willReturn(response);
 
         mockMvc.perform(post("/api/rounds/{roundId}/submit", roundId)

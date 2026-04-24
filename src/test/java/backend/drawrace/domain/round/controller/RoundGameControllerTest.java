@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 
 import backend.drawrace.domain.round.dto.CurrentRoundResponse;
@@ -22,6 +25,7 @@ import backend.drawrace.domain.round.dto.RoundParticipantResponse;
 import backend.drawrace.domain.round.dto.RoundStartResponse;
 import backend.drawrace.domain.round.entity.RoundStatus;
 import backend.drawrace.domain.round.service.RoundService;
+import backend.drawrace.global.security.SecurityUser;
 
 @WebMvcTest(RoundGameController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -33,10 +37,21 @@ class RoundGameControllerTest {
     @MockBean
     private RoundService roundService;
 
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
     @Test
     @DisplayName("게임 시작 요청 성공")
     void startGame_success() throws Exception {
         Long roomId = 1L;
+        Long userId = 1L;
+
+        SecurityUser securityUser = new SecurityUser(userId, "test@test.com");
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(securityUser, null, securityUser.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
 
         RoundStartResponse response = RoundStartResponse.builder()
                 .roomId(roomId)
@@ -47,7 +62,7 @@ class RoundGameControllerTest {
                 .startedAt(LocalDateTime.of(2026, 4, 21, 12, 0, 0))
                 .build();
 
-        given(roundService.startGame(roomId, 1L)).willReturn(response);
+        given(roundService.startGame(roomId, userId)).willReturn(response);
 
         mockMvc.perform(post("/api/rooms/{roomId}/start", roomId)
                         .contentType(MediaType.APPLICATION_JSON))
@@ -66,6 +81,12 @@ class RoundGameControllerTest {
     @DisplayName("현재 라운드 조회 요청 성공")
     void getCurrentRound_success() throws Exception {
         Long roomId = 1L;
+        Long userId = 1L;
+
+        SecurityUser securityUser = new SecurityUser(userId, "test@test.com");
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(securityUser, null, securityUser.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
 
         CurrentRoundResponse response = CurrentRoundResponse.builder()
                 .roomId(roomId)
@@ -91,7 +112,7 @@ class RoundGameControllerTest {
                 ))
                 .build();
 
-        given(roundService.getCurrentRound(roomId)).willReturn(response);
+        given(roundService.getCurrentRound(roomId, userId)).willReturn(response);
 
         mockMvc.perform(get("/api/rooms/{roomId}/rounds/current", roomId)
                         .contentType(MediaType.APPLICATION_JSON))
