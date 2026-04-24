@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import backend.drawrace.domain.room.dto.request.CreateRoomReq;
 import backend.drawrace.domain.room.dto.response.GetRoomListRes;
+import backend.drawrace.domain.room.dto.response.RankingRes;
 import backend.drawrace.domain.room.dto.response.RoomInfoRes;
 import backend.drawrace.domain.room.entity.Participant;
 import backend.drawrace.domain.room.entity.Room;
@@ -27,6 +28,7 @@ public class RoomService {
     private final RoomRepository roomRepository;
     private final ParticipantRepository participantRepository;
     private final UserRepository userRepository;
+    private final RankingService rankingService;
 
     @Transactional
     public RoomInfoRes createRoom(CreateRoomReq req, Long userId) {
@@ -152,6 +154,52 @@ public class RoomService {
         }
     }
 
+    @Transactional
+    public void finishGame(Long roomId) {
+        // 방 정보 조회 및 상태 변경
+        Room room = roomRepository.findById(roomId).orElseThrow(() -> new ServiceException("404-2", "방을 찾을 수 없습니다."));
+        room.finishGame(); //
+
+        // 랭킹 데이터 가져오기
+        var rankingList = rankingService.getRankingList(roomId);
+
+        // 참여자 목록 조회
+        List<Participant> participants = participantRepository.findByRoomId(roomId);
+
+        int maxWinCount = participants.stream()
+                .mapToInt(Participant::getRoundWinCount)
+                .max()
+                .orElse(0);
+
+        for (Participant p : participants) {
+            // 모든 참가자 전체 판수 기록
+            p.getUserId().getStats().recordGame();
+
+            // 최고 라운드 승리자들을 최종 우승자로 기록
+            if (p.getRoundWinCount() == maxWinCount && maxWinCount > 0) {
+                p.markWinner();
+                p.getUserId().getStats().recordWin(); // 승리 판수 기록
+            }
+        }
+
+        rankingService.clearRanking(roomId);
+    }
+
+    public List<RankingRes> getFinalRanking(Long roomId) {
+        // 해당 방의 모든 참여자 조회
+        List<Participant> participants = participantRepository.findByRoomId(roomId);
+
+        return participants.stream()
+                .map(p -> RankingRes.builder()
+                        .userId(p.getUserId().getId())
+                        .nickname(p.getUserId().getNickname())
+                        .roundWinCount(p.getRoundWinCount())
+                        .isWinner(p.isWinner())
+                        .build())
+                .sorted((a, b) -> b.roundWinCount() - a.roundWinCount()) // 승리 횟수 내림차순 정렬
+                .toList();
+    }
+
     /*
     @Transactional
     public void startGame(Long roomId, Long userId) {
@@ -170,4 +218,5 @@ public class RoomService {
     }
 
      */
+
 }

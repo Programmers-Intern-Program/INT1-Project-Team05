@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.List;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,11 +15,15 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import backend.drawrace.domain.room.dto.response.RoomInfoRes;
 import backend.drawrace.domain.room.service.RoomService;
+import backend.drawrace.global.security.SecurityUser;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -29,6 +34,16 @@ class RoomControllerTest {
 
     @MockBean
     private RoomService roomService;
+
+    @BeforeEach
+    void setUp() {
+        // 가짜 SecurityUser 생성 (프로젝트의 SecurityUser 구조에 맞게 생성자 호출)
+        SecurityUser mockSecurityUser = new SecurityUser(1L, "test@test.com");
+        // 시큐리티 컨텍스트에 인증 정보 강제 주입
+        Authentication auth =
+                new UsernamePasswordAuthenticationToken(mockSecurityUser, null, mockSecurityUser.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
 
     @Test
     @WithMockUser

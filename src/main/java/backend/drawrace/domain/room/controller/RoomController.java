@@ -4,14 +4,17 @@ import java.util.List;
 
 import jakarta.validation.Valid;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import backend.drawrace.domain.room.dto.request.CreateRoomReq;
 import backend.drawrace.domain.room.dto.request.JoinRoomReq;
 import backend.drawrace.domain.room.dto.response.GetRoomListRes;
+import backend.drawrace.domain.room.dto.response.RankingRes;
 import backend.drawrace.domain.room.dto.response.RoomInfoRes;
 import backend.drawrace.domain.room.service.RoomService;
 import backend.drawrace.global.rsdata.RsData;
+import backend.drawrace.global.security.SecurityUser;
 
 import lombok.RequiredArgsConstructor;
 
@@ -24,8 +27,9 @@ public class RoomController {
 
     // 방 생성
     @PostMapping
-    public RsData<RoomInfoRes> createRoom(@Valid @RequestBody CreateRoomReq req) {
-        RoomInfoRes response = roomService.createRoom(req, 1L);
+    public RsData<RoomInfoRes> createRoom(
+            @Valid @RequestBody CreateRoomReq req, @AuthenticationPrincipal SecurityUser securityUser) {
+        RoomInfoRes response = roomService.createRoom(req, securityUser.getUserId());
         return new RsData<>("201-1", "방이 성공적으로 생성되었습니다.", response);
     }
 
@@ -45,9 +49,12 @@ public class RoomController {
 
     // 방 입장
     @PostMapping("/{roomId}/join")
-    public RsData<RoomInfoRes> joinRoom(@PathVariable Long roomId, @RequestBody(required = false) JoinRoomReq req) {
+    public RsData<RoomInfoRes> joinRoom(
+            @PathVariable Long roomId,
+            @RequestBody(required = false) JoinRoomReq req,
+            @AuthenticationPrincipal SecurityUser securityUser) {
         String password = (req != null) ? req.password() : null;
-        RoomInfoRes detail = roomService.joinRoom(roomId, 2L, password);
+        RoomInfoRes detail = roomService.joinRoom(roomId, securityUser.getUserId(), password);
         return new RsData<>("200-3", "방에 입장했습니다.", detail);
     }
 
@@ -60,9 +67,15 @@ public class RoomController {
     */
     // 방 퇴장
     @DeleteMapping("/{roomId}/leave")
-    public RsData<Void> leaveRoom(@PathVariable Long roomId) {
-        // 인증 로직 구현 전 임시 아이디
-        roomService.leaveRoom(roomId, 1L);
+    public RsData<Void> leaveRoom(@PathVariable Long roomId, @AuthenticationPrincipal SecurityUser securityUser) {
+        roomService.leaveRoom(roomId, securityUser.getUserId());
         return new RsData<>("200-4", "방에서 성공적으로 퇴장했습니다.");
+    }
+
+    @GetMapping("/{roomId}/ranking")
+    public RsData<List<RankingRes>> getFinalRanking(@PathVariable Long roomId) {
+        List<RankingRes> ranking = roomService.getFinalRanking(roomId);
+
+        return new RsData<>("200-1", "랭킹 조회 성공", ranking);
     }
 }
