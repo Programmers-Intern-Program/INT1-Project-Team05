@@ -24,11 +24,7 @@ class UserServiceTest {
     AuthService authService;
 
     private Long createTestUser() {
-        return authService.signup(CreateUserRequest.builder()
-                .email("test@example.com")
-                .password("password123")
-                .nickname("테스터")
-                .build());
+        return authService.signup(new CreateUserRequest("test@example.com", "password123", "테스터"));
     }
 
     @Test
@@ -38,9 +34,9 @@ class UserServiceTest {
 
         UserInfoResponse response = userService.getUser(savedId);
 
-        assertThat(response.getId()).isEqualTo(savedId);
-        assertThat(response.getEmail()).isEqualTo("test@example.com");
-        assertThat(response.getNickname()).isEqualTo("테스터");
+        assertThat(response.id()).isEqualTo(savedId);
+        assertThat(response.email()).isEqualTo("test@example.com");
+        assertThat(response.nickname()).isEqualTo("테스터");
     }
 
     @Test

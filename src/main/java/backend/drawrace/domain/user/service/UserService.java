@@ -1,6 +1,7 @@
 package backend.drawrace.domain.user.service;
 
 import backend.drawrace.domain.user.dto.UserInfoResponse;
+import backend.drawrace.domain.user.entity.User;
 
 public interface UserService {
 
@@ -16,4 +17,11 @@ public interface UserService {
      * @param userId 탈퇴할 유저 ID
      */
     void deleteUser(Long userId);
+
+    /**
+     * 유저 엔티티 직접 조회 (서비스 간 내부 사용)
+     * @param userId 조회할 유저 ID
+     * @return User 엔티티
+     */
+    User findById(Long userId);
 }

@@ -30,17 +30,17 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public Long signup(CreateUserRequest dto) {
-        if (userRepository.existsByEmail(dto.getEmail())) {
+        if (userRepository.existsByEmail(dto.email())) {
             throw new ServiceException("409-1", "이미 존재하는 이메일입니다.");
         }
-        if (userRepository.existsByNickname(dto.getNickname())) {
+        if (userRepository.existsByNickname(dto.nickname())) {
             throw new ServiceException("409-2", "이미 존재하는 닉네임입니다.");
         }
 
         User user = User.builder()
-                .email(dto.getEmail())
-                .password(passwordEncoder.encode(dto.getPassword()))
-                .nickname(dto.getNickname())
+                .email(dto.email())
+                .password(passwordEncoder.encode(dto.password()))
+                .nickname(dto.nickname())
                 .build();
 
         return userRepository.save(user).getId();
@@ -49,10 +49,10 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public LoginResponse login(LoginRequest dto) {
         User user = userRepository
-                .findByEmail(dto.getEmail())
+                .findByEmail(dto.email())
                 .orElseThrow(() -> new ServiceException("401-1", "이메일 또는 비밀번호가 올바르지 않습니다."));
 
-        if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
+        if (!passwordEncoder.matches(dto.password(), user.getPassword())) {
             throw new ServiceException("401-1", "이메일 또는 비밀번호가 올바르지 않습니다.");
         }
 
@@ -61,26 +61,23 @@ public class AuthServiceImpl implements AuthService {
 
         refreshTokenRepository.save(new RefreshToken(user.getId(), refreshToken));
 
-        return LoginResponse.builder()
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .build();
+        return new LoginResponse(accessToken, refreshToken);
     }
 
     @Override
     @Transactional
     public LoginResponse reissue(TokenRequest request) {
-        if (!jwtTokenProvider.validateToken(request.getRefreshToken())) {
+        if (!jwtTokenProvider.validateToken(request.refreshToken())) {
             throw new ServiceException("401-2", "리프레시 토큰이 유효하지 않거나 만료되었습니다.");
         }
 
-        Long userId = Long.valueOf(jwtTokenProvider.getSubject(request.getRefreshToken()));
+        Long userId = Long.valueOf(jwtTokenProvider.getSubject(request.refreshToken()));
 
         RefreshToken savedToken = refreshTokenRepository
                 .findById(userId)
                 .orElseThrow(() -> new ServiceException("401-3", "로그아웃되었거나 유효하지 않은 세션입니다."));
 
-        if (!savedToken.getTokenValue().equals(request.getRefreshToken())) {
+        if (!savedToken.getTokenValue().equals(request.refreshToken())) {
             throw new ServiceException("401-4", "토큰 정보가 일치하지 않습니다. 다시 로그인해주세요.");
         }
 
@@ -91,10 +88,7 @@ public class AuthServiceImpl implements AuthService {
 
         refreshTokenRepository.save(new RefreshToken(user.getId(), newRefreshToken));
 
-        return LoginResponse.builder()
-                .accessToken(newAccessToken)
-                .refreshToken(newRefreshToken)
-                .build();
+        return new LoginResponse(newAccessToken, newRefreshToken);
     }
 
     @Override
