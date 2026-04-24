@@ -36,7 +36,7 @@ public class RoundService {
     private final RoundRepository roundRepository;
     private final RoundParticipantRepository roundParticipantRepository;
     private final RoundSubmissionRepository roundSubmissionRepository;
-    private final KeywordProvider keywordProvider;
+    private final KeywordGenerator keywordGenerator;
     private final RoundValidator roundValidator;
     private final AiInferenceService aiInferenceService;
 
@@ -54,7 +54,7 @@ public class RoundService {
         roundValidator.validateStartGame(
                 room, participantCount, roundRepository.findByRoomIdAndIsActiveTrue(roomId), userId);
 
-        String keyword = keywordProvider.getRandomKeyword();
+        String keyword = keywordGenerator.generateKeyword();
 
         Round firstRound = Round.create(room, 1, keyword);
         firstRound.start();
@@ -315,7 +315,7 @@ public class RoundService {
      * 다음 일반 라운드를 생성하고 시작한다.
      */
     private Round createNextRound(Room room, int nextRoundNumber) {
-        String keyword = keywordProvider.getRandomKeyword();
+        String keyword = keywordGenerator.generateKeyword();
 
         Round nextRound = Round.create(room, nextRoundNumber, keyword);
         nextRound.start();
@@ -327,7 +327,7 @@ public class RoundService {
      * 결승 라운드를 생성하고 시작한다.
      */
     private Round createTieBreakerRound(Room room, int nextRoundNumber) {
-        String keyword = keywordProvider.getRandomKeyword();
+        String keyword = keywordGenerator.generateKeyword();
 
         Round tieBreakerRound = Round.createTieBreaker(room, nextRoundNumber, keyword);
         tieBreakerRound.start();

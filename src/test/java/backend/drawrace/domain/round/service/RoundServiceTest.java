@@ -55,7 +55,7 @@ class RoundServiceTest {
     private RoundSubmissionRepository roundSubmissionRepository;
 
     @Mock
-    private KeywordProvider keywordProvider;
+    private KeywordGenerator keywordGenerator;
 
     @Mock
     private RoundValidator roundValidator;
@@ -79,7 +79,7 @@ class RoundServiceTest {
         given(roomRepository.findById(roomId)).willReturn(Optional.of(room));
         given(participantRepository.countByRoomId(roomId)).willReturn(2L);
         given(roundRepository.findByRoomIdAndIsActiveTrue(roomId)).willReturn(Optional.empty());
-        given(keywordProvider.getRandomKeyword()).willReturn("사과");
+        given(keywordGenerator.generateKeyword()).willReturn("사과");
         given(participantRepository.findByRoomId(roomId)).willReturn(List.of(participant1, participant2));
         given(roundRepository.save(any(Round.class))).willAnswer(invocation -> {
             Round saved = invocation.getArgument(0);
@@ -185,7 +185,7 @@ class RoundServiceTest {
         given(roundSubmissionRepository.countByRoundId(roundId)).willReturn(2L);
         given(roundParticipantRepository.countByRoundId(roundId)).willReturn(2L);
         given(roundSubmissionRepository.findByRoundId(roundId)).willReturn(List.of(currentSubmission, otherSubmission));
-        given(keywordProvider.getRandomKeyword()).willReturn("자동차");
+        given(keywordGenerator.generateKeyword()).willReturn("자동차");
         given(participantRepository.findByRoomId(roomId)).willReturn(List.of(participant, participant2));
         given(roundRepository.save(any(Round.class))).willAnswer(invocation -> {
             Round saved = invocation.getArgument(0);
@@ -287,7 +287,7 @@ class RoundServiceTest {
         given(roundParticipantRepository.countByRoundId(roundId)).willReturn(2L);
         given(roundSubmissionRepository.findByRoundId(roundId)).willReturn(List.of(currentSubmission, otherSubmission));
         given(participantRepository.findByRoomId(roomId)).willReturn(List.of(participant, participant2));
-        given(keywordProvider.getRandomKeyword()).willReturn("자동차");
+        given(keywordGenerator.generateKeyword()).willReturn("자동차");
         given(roundRepository.save(any(Round.class))).willAnswer(invocation -> {
             Round saved = invocation.getArgument(0);
             setField(saved, "id", 40L);
