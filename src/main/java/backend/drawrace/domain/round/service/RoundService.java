@@ -2,6 +2,7 @@ package backend.drawrace.domain.round.service;
 
 import java.util.List;
 
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +40,7 @@ public class RoundService {
     private final KeywordGenerator keywordGenerator;
     private final RoundValidator roundValidator;
     private final AiInferenceService aiInferenceService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     /**
      * 게임 시작 처리
@@ -65,7 +67,11 @@ public class RoundService {
         List<Participant> participants = participantRepository.findByRoomId(roomId);
         saveRoundParticipants(savedRound, participants);
 
-        return RoundStartResponse.from(savedRound);
+        RoundStartResponse response = RoundStartResponse.from(savedRound);
+
+        messagingTemplate.convertAndSend("/sub/rooms/" + roomId, response);
+
+        return response;
     }
 
     /**
@@ -122,7 +128,15 @@ public class RoundService {
         }
 
         // 전원 제출 완료 시 라운드 종료 처리
-        return handleRoundCompletion(round, aiResult, submittedCount, totalParticipantCount);
+        SubmitDrawingResponse response = handleRoundCompletion(round, aiResult, submittedCount, totalParticipantCount);
+
+        if (response.isRoundFinished()) {
+            Long roomId = round.getRoom().getId();
+            // 구독 경로: /sub/rooms/{roomId} 로 결과 전송
+            messagingTemplate.convertAndSend("/sub/rooms/" + roomId, response);
+        }
+
+        return response;
     }
 
     /**
