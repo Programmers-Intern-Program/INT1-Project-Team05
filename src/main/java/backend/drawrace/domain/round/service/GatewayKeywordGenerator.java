@@ -22,8 +22,7 @@ public class GatewayKeywordGenerator implements KeywordGenerator {
 
     private final AiProperties aiProperties;
 
-    private static final List<String> FALLBACK_KEYWORDS =
-            List.of("사과", "자동차", "고양이", "비행기", "의자");
+    private static final List<String> FALLBACK_KEYWORDS = List.of("사과", "자동차", "고양이", "비행기", "의자");
 
     /**
      * AI Gateway를 호출해 게임용 제시어를 생성한다.
