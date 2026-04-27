@@ -15,6 +15,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import backend.drawrace.domain.room.entity.Participant;
 import backend.drawrace.domain.room.entity.Room;
@@ -35,6 +36,7 @@ import backend.drawrace.domain.round.repository.RoundSubmissionRepository;
 import backend.drawrace.domain.round.validator.RoundValidator;
 import backend.drawrace.domain.user.entity.User;
 import backend.drawrace.global.exception.ServiceException;
+
 
 @ExtendWith(MockitoExtension.class)
 class RoundServiceTest {
@@ -59,6 +61,9 @@ class RoundServiceTest {
 
     @Mock
     private RoundValidator roundValidator;
+
+    @Mock
+    private SimpMessagingTemplate messagingTemplate;
 
     @Mock
     private AiInferenceService aiInferenceService;
