@@ -16,96 +16,124 @@ import backend.drawrace.global.exception.ServiceException;
 
 class GatewayAiInferenceServiceTest {
 
-    private final GatewayAiInferenceService gatewayAiInferenceService = new GatewayAiInferenceService(
-            new AiProperties("https://test.example.com", "test-key", "test-model"), new ObjectMapper());
+    private final GatewayAiInferenceService gatewayAiInferenceService =
+            new GatewayAiInferenceService(
+                    new AiProperties("http://test", "test-key", "test-model"),
+                    new ObjectMapper());
 
     @Test
-    @DisplayName("sanitizeContent는 코드블록이 포함된 JSON 응답을 정제한다")
-    void sanitizeContent_success_codeBlockWrappedJson() throws Exception {
-        String rawContent = """
-            ```json
-            {
-              "aiAnswer": "사과",
-              "score": 0.0
-            }
-            ```
-            """;
-
-        String sanitized = invokeSanitizeContent(rawContent);
-
-        assertThat(sanitized).isEqualTo("""
-            {
-              "aiAnswer": "사과",
-              "score": 0.0
-            }""");
-    }
-
-    @Test
-    @DisplayName("sanitizeContent는 앞뒤 설명이 있어도 JSON 본문만 추출한다")
-    void sanitizeContent_success_extractJsonBody() throws Exception {
-        String rawContent = """
-            아래는 분석 결과입니다.
-            ```json
-            {
-              "aiAnswer": "사과",
-              "score": 0.82
-            }
-            ```
-            감사합니다.
-            """;
-
-        String sanitized = invokeSanitizeContent(rawContent);
-
-        assertThat(sanitized).isEqualTo("""
-            {
-              "aiAnswer": "사과",
-              "score": 0.82
-            }""");
-    }
-
-    @Test
-    @DisplayName("parseInferenceResult는 정상 JSON 문자열을 파싱한다")
-    void parseInferenceResult_success() throws Exception {
+    @DisplayName("코드블록으로 감싸진 JSON 응답에서 JSON 본문만 추출한다")
+    void sanitizeContent_codeBlockWrappedJson() throws Exception {
         String content = """
+                ```json
+                {
+                  "aiAnswer": "사과",
+                  "score": 0.82
+                }
+                ```
+                """;
+
+        String result = invokeSanitizeContent(content);
+
+        assertThat(result).isEqualTo("""
+                {
+                  "aiAnswer": "사과",
+                  "score": 0.82
+                }""");
+    }
+
+    @Test
+    @DisplayName("설명 문장이 섞여 있어도 JSON 본문만 추출한다")
+    void sanitizeContent_extractJsonBody() throws Exception {
+        String content = """
+                아래는 판별 결과입니다.
+
                 {
                   "aiAnswer": "사과",
                   "score": 0.91
                 }
                 """;
 
+        String result = invokeSanitizeContent(content);
+
+        assertThat(result).isEqualTo("""
+                {
+                  "aiAnswer": "사과",
+                  "score": 0.91
+                }""");
+    }
+
+    @Test
+    @DisplayName("정상 JSON 문자열을 판별 결과 객체로 변환한다")
+    void parseInferenceResult_success() throws Exception {
+        String content = """
+                {
+                  "aiAnswer": "사과",
+                  "score": 0.95
+                }
+                """;
+
         GatewayInferenceResult result = invokeParseInferenceResult(content);
 
         assertThat(result.getAiAnswer()).isEqualTo("사과");
-        assertThat(result.getScore()).isEqualTo(0.91);
+        assertThat(result.getScore()).isEqualTo(0.95);
     }
 
     @Test
-    @DisplayName("sanitizeContent 후 parseInferenceResult는 코드블록 응답을 정상 파싱한다")
-    void sanitizeAndParse_success() throws Exception {
-        String rawContent = """
-                ```json
-                {
-                  "aiAnswer": "사과",
-                  "score": 0.77
-                }
-                ```
-                """;
-
-        String sanitized = invokeSanitizeContent(rawContent);
-        GatewayInferenceResult result = invokeParseInferenceResult(sanitized);
-
-        assertThat(result.getAiAnswer()).isEqualTo("사과");
-        assertThat(result.getScore()).isEqualTo(0.77);
-    }
-
-    @Test
-    @DisplayName("parseInferenceResult는 JSON 형식이 아니면 예외를 던진다")
+    @DisplayName("JSON 형식이 아니면 파싱 예외가 발생한다")
     void parseInferenceResult_fail_invalidJson() {
-        String invalidContent = "사과입니다. score는 0.9입니다.";
+        String content = "사과입니다. score는 0.9입니다.";
 
-        assertThatThrownBy(() -> invokeParseInferenceResult(invalidContent))
+        assertThatThrownBy(() -> invokeParseInferenceResult(content))
                 .isInstanceOf(ServiceException.class)
                 .hasMessageContaining("AI 응답 파싱에 실패했습니다");
+    }
+
+    @Test
+    @DisplayName("aiAnswer와 score가 정상 범위면 검증을 통과한다")
+    void validateInferenceResult_success() throws Exception {
+        GatewayInferenceResult result = new GatewayInferenceResult();
+        setField(result, "aiAnswer", "사과");
+        setField(result, "score", 0.77);
+
+        assertThatCode(() -> invokeValidateInferenceResult(result))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("aiAnswer가 비어 있으면 검증 예외가 발생한다")
+    void validateInferenceResult_fail_blankAnswer() throws Exception {
+        GatewayInferenceResult result = new GatewayInferenceResult();
+        setField(result, "aiAnswer", "");
+        setField(result, "score", 0.77);
+
+        assertThatThrownBy(() -> invokeValidateInferenceResult(result))
+                .isInstanceOf(ServiceException.class)
+                .hasMessageContaining("AI 응답이 올바르지 않습니다");
+    }
+
+    @Test
+    @DisplayName("score가 0 미만이면 검증 예외가 발생한다")
+    void validateInferenceResult_fail_negativeScore() throws Exception {
+        GatewayInferenceResult result = new GatewayInferenceResult();
+        setField(result, "aiAnswer", "사과");
+        setField(result, "score", -0.1);
+
+        assertThatThrownBy(() -> invokeValidateInferenceResult(result))
+                .isInstanceOf(ServiceException.class)
+                .hasMessageContaining("AI 응답이 올바르지 않습니다");
+    }
+
+    @Test
+    @DisplayName("score가 1 초과면 검증 예외가 발생한다")
+    void validateInferenceResult_fail_scoreOverOne() throws Exception {
+        GatewayInferenceResult result = new GatewayInferenceResult();
+        setField(result, "aiAnswer", "사과");
+        setField(result, "score", 1.1);
+
+        assertThatThrownBy(() -> invokeValidateInferenceResult(result))
+                .isInstanceOf(ServiceException.class)
+                .hasMessageContaining("AI 응답이 올바르지 않습니다");
     }
 
     @Test
@@ -125,7 +153,15 @@ class GatewayAiInferenceServiceTest {
     }
 
     @Test
-    @DisplayName("extractContent는 choices가 없으면 예외를 던진다")
+    @DisplayName("응답이 null이면 content 추출 예외가 발생한다")
+    void extractContent_fail_nullResponse() {
+        assertThatThrownBy(() -> invokeExtractContent(null))
+                .isInstanceOf(ServiceException.class)
+                .hasMessageContaining("AI 응답이 올바르지 않습니다");
+    }
+
+    @Test
+    @DisplayName("choices가 없으면 content 추출 예외가 발생한다")
     void extractContent_fail_emptyChoices() {
         GatewayChatResponse response = new GatewayChatResponse();
 
@@ -154,8 +190,26 @@ class GatewayAiInferenceServiceTest {
         }
     }
 
+    private void invokeValidateInferenceResult(GatewayInferenceResult result) throws Exception {
+        Method method = GatewayAiInferenceService.class.getDeclaredMethod(
+                "validateInferenceResult",
+                GatewayInferenceResult.class);
+        method.setAccessible(true);
+
+        try {
+            method.invoke(gatewayAiInferenceService, result);
+        } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException runtimeException) {
+                throw runtimeException;
+            }
+            throw e;
+        }
+    }
+
     private String invokeExtractContent(GatewayChatResponse response) throws Exception {
-        Method method = GatewayAiInferenceService.class.getDeclaredMethod("extractContent", GatewayChatResponse.class);
+        Method method = GatewayAiInferenceService.class.getDeclaredMethod(
+                "extractContent",
+                GatewayChatResponse.class);
         method.setAccessible(true);
 
         try {
