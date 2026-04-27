@@ -15,13 +15,14 @@ import lombok.RequiredArgsConstructor;
 public class AiUserInitializer implements ApplicationRunner {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public void run(ApplicationArguments args) {
         if (!userRepository.existsByEmail("ai@drawrace.com")) {
             User aiUser = User.builder()
                     .email("ai@drawrace.com")
-                    .password("AI_NO_LOGIN")
+                    .password(passwordEncoder.encode("AI_NO_LOGIN"))
                     .nickname("AI봇")
                     .isAi(true)
                     .build();
