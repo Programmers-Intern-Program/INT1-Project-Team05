@@ -242,12 +242,10 @@ class RoundServiceTest {
         SubmitDrawingRequest request = createSubmitDrawingRequest(participantId, "dummy-image");
 
         // 현재 요청자는 마지막 제출자지만 점수는 낮다
-        RoundSubmission currentSubmission =
-                RoundSubmission.create(round, participant, "dummy-image", "강아지", 0.30);
+        RoundSubmission currentSubmission = RoundSubmission.create(round, participant, "dummy-image", "강아지", 0.30);
 
         // 다른 참가자가 더 높은 점수로 라운드 승자다
-        RoundSubmission winnerSubmission =
-                RoundSubmission.create(round, winnerParticipant, "winner-image", "사과", 0.95);
+        RoundSubmission winnerSubmission = RoundSubmission.create(round, winnerParticipant, "winner-image", "사과", 0.95);
 
         given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
         given(participantRepository.findByIdAndRoomId(participantId, roomId)).willReturn(Optional.of(participant));
@@ -255,8 +253,7 @@ class RoundServiceTest {
                 .willReturn(true);
         given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, participantId))
                 .willReturn(false);
-        given(aiInferenceService.infer("dummy-image", "사과"))
-                .willReturn(new AiInferenceResponse("강아지", 0.30));
+        given(aiInferenceService.infer("dummy-image", "사과")).willReturn(new AiInferenceResponse("강아지", 0.30));
         given(roundSubmissionRepository.countByRoundId(roundId)).willReturn(2L);
         given(roundParticipantRepository.countByRoundId(roundId)).willReturn(2L);
         given(roundSubmissionRepository.findByRoundId(roundId))
@@ -312,8 +309,7 @@ class RoundServiceTest {
         SubmitDrawingRequest request = createSubmitDrawingRequest(participantId, "dummy-image");
 
         // 현재 요청자는 마지막 제출자이고, 점수는 동일하다
-        RoundSubmission currentSubmission =
-                RoundSubmission.create(round, participant, "dummy-image", "사과", 0.95);
+        RoundSubmission currentSubmission = RoundSubmission.create(round, participant, "dummy-image", "사과", 0.95);
 
         // 다른 참가자가 같은 점수지만 더 먼저 제출했다
         RoundSubmission earlierSubmission =
@@ -328,8 +324,7 @@ class RoundServiceTest {
                 .willReturn(true);
         given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, participantId))
                 .willReturn(false);
-        given(aiInferenceService.infer("dummy-image", "사과"))
-                .willReturn(new AiInferenceResponse("사과", 0.95));
+        given(aiInferenceService.infer("dummy-image", "사과")).willReturn(new AiInferenceResponse("사과", 0.95));
         given(roundSubmissionRepository.countByRoundId(roundId)).willReturn(2L);
         given(roundParticipantRepository.countByRoundId(roundId)).willReturn(2L);
         given(roundSubmissionRepository.findByRoundId(roundId))
@@ -539,8 +534,7 @@ class RoundServiceTest {
         SubmitDrawingRequest request = createSubmitDrawingRequest(participantId, "dummy-image");
 
         // 현재 요청자는 마지막 제출자이고, 점수는 동일하다
-        RoundSubmission currentSubmission =
-                RoundSubmission.create(round, participant, "dummy-image", "사과", 0.95);
+        RoundSubmission currentSubmission = RoundSubmission.create(round, participant, "dummy-image", "사과", 0.95);
 
         // 다른 참가자가 같은 점수지만 더 먼저 제출했다
         RoundSubmission earlierSubmission =
@@ -555,8 +549,7 @@ class RoundServiceTest {
                 .willReturn(true);
         given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, participantId))
                 .willReturn(false);
-        given(aiInferenceService.infer("dummy-image", "사과"))
-                .willReturn(new AiInferenceResponse("사과", 0.95));
+        given(aiInferenceService.infer("dummy-image", "사과")).willReturn(new AiInferenceResponse("사과", 0.95));
         given(roundSubmissionRepository.countByRoundId(roundId)).willReturn(2L);
         given(roundParticipantRepository.countByRoundId(roundId)).willReturn(2L);
         given(roundSubmissionRepository.findByRoundId(roundId))
