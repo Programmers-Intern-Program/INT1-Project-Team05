@@ -10,6 +10,7 @@ import backend.drawrace.domain.room.dto.request.CreateRoomReq;
 import backend.drawrace.domain.room.dto.response.GetRoomListRes;
 import backend.drawrace.domain.room.dto.response.RankingRes;
 import backend.drawrace.domain.room.dto.response.RoomInfoRes;
+import backend.drawrace.domain.room.dto.response.RoomUpdateResponse;
 import backend.drawrace.domain.room.entity.Participant;
 import backend.drawrace.domain.room.entity.Room;
 import backend.drawrace.domain.room.repository.ParticipantRepository;
@@ -96,7 +97,7 @@ public class RoomService {
     }
 
     @Transactional
-    public RoomInfoRes joinRoom(Long roomId, Long userId, String inputPassword) {
+    public RoomUpdateResponse joinRoom(Long roomId, Long userId, String inputPassword) {
         Room room = roomRepository.findById(roomId).orElseThrow(() -> new ServiceException("404-2", "방을 찾을 수 없습니다."));
 
         // 비밀번호 체크 (방에 비밀번호가 걸려있는 경우만)
@@ -122,17 +123,28 @@ public class RoomService {
         participantRepository.save(participant);
         room.addParticipant(participant);
 
-        return getRoomDetail(roomId);
+        return RoomUpdateResponse.builder()
+                .roomId(roomId)
+                .type("USER_ENTER")
+                .participants(room.getParticipants().stream()
+                        .map(p -> p.getUserId().getNickname())
+                        .toList())
+                .message(user.getNickname() + "님이 입장하셨습니다.")
+                .build();
     }
 
     @Transactional
-    public void leaveRoom(Long roomId, Long userId) {
-        Room room = roomRepository.findById(roomId).orElseThrow(() -> new ServiceException("404-2", "방을 찾을 수 없습니다."));
+    public RoomUpdateResponse leaveRoom(Long userId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new ServiceException("404-1", "유저를 찾을 수 없습니다."));
 
         Participant participant = participantRepository
-                .findByRoomAndUserId(room, user)
+                .findByUserId(user)
                 .orElseThrow(() -> new ServiceException("404-3", "참여 정보를 찾을 수 없습니다."));
+
+        Room room = participant.getRoom();
+        Long roomId = room.getId();
+        Long leaverId = userId;
+        Long newHostId = null;
 
         // 방장이 나가는 경우 방장 위임 로직
         if (participant.isHost() && room.getCurPlayers() > 1) {
@@ -151,7 +163,19 @@ public class RoomService {
         // 방에 아무도 없으면 방 삭제
         if (room.getCurPlayers() == 0) {
             roomRepository.delete(room);
+            return null;
         }
+        // 웹소켓 동기화를 위한 데이터 반환
+        return RoomUpdateResponse.builder()
+                .roomId(roomId)
+                .type("USER_LEAVE")
+                .leaverId(leaverId)
+                .newHostId(newHostId != null ? newHostId : room.getHostId())
+                .participants(room.getParticipants().stream()
+                        .map(p -> p.getUserId().getNickname())
+                        .toList())
+                .message(user.getNickname() + "님이 퇴장하셨습니다.")
+                .build();
     }
 
     @Transactional
