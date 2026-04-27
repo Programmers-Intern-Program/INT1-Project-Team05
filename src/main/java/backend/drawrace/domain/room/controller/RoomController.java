@@ -4,6 +4,7 @@ import java.util.List;
 
 import jakarta.validation.Valid;
 
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,6 +13,7 @@ import backend.drawrace.domain.room.dto.request.JoinRoomReq;
 import backend.drawrace.domain.room.dto.response.GetRoomListRes;
 import backend.drawrace.domain.room.dto.response.RankingRes;
 import backend.drawrace.domain.room.dto.response.RoomInfoRes;
+import backend.drawrace.domain.room.dto.response.RoomUpdateResponse;
 import backend.drawrace.domain.room.service.RoomService;
 import backend.drawrace.global.rsdata.RsData;
 import backend.drawrace.global.security.SecurityUser;
@@ -24,6 +26,7 @@ import lombok.RequiredArgsConstructor;
 public class RoomController {
 
     private final RoomService roomService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     // 방 생성
     @PostMapping
@@ -49,13 +52,14 @@ public class RoomController {
 
     // 방 입장
     @PostMapping("/{roomId}/join")
-    public RsData<RoomInfoRes> joinRoom(
+    public RsData<RoomUpdateResponse> joinRoom(
             @PathVariable Long roomId,
             @RequestBody(required = false) JoinRoomReq req,
             @AuthenticationPrincipal SecurityUser securityUser) {
         String password = (req != null) ? req.password() : null;
-        RoomInfoRes detail = roomService.joinRoom(roomId, securityUser.getUserId(), password);
-        return new RsData<>("200-3", "방에 입장했습니다.", detail);
+        RoomUpdateResponse response = roomService.joinRoom(roomId, securityUser.getUserId(), password);
+        messagingTemplate.convertAndSend("/sub/rooms/" + roomId, response);
+        return new RsData<>("200-3", "방에 입장했습니다.", response);
     }
 
     // 게임 시작 요청
@@ -68,7 +72,14 @@ public class RoomController {
     // 방 퇴장
     @DeleteMapping("/{roomId}/leave")
     public RsData<Void> leaveRoom(@PathVariable Long roomId, @AuthenticationPrincipal SecurityUser securityUser) {
-        roomService.leaveRoom(roomId, securityUser.getUserId());
+        RoomUpdateResponse response = roomService.leaveRoom(securityUser.getUserId());
+
+        // 방에 남은 유저들에게 실시간으로 퇴장 및 방장 변경 정보를 전송
+        if (response != null) {
+            // 구독 경로: /sub/rooms/{roomId}
+            messagingTemplate.convertAndSend("/sub/rooms/" + roomId, response);
+        }
+
         return new RsData<>("200-4", "방에서 성공적으로 퇴장했습니다.");
     }
 

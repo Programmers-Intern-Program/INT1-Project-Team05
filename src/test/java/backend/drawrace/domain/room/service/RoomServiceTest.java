@@ -20,6 +20,7 @@ import org.springframework.data.redis.core.ZSetOperations;
 
 import backend.drawrace.domain.room.dto.request.CreateRoomReq;
 import backend.drawrace.domain.room.dto.response.RoomInfoRes;
+import backend.drawrace.domain.room.dto.response.RoomUpdateResponse;
 import backend.drawrace.domain.room.entity.Participant;
 import backend.drawrace.domain.room.entity.Room;
 import backend.drawrace.domain.room.repository.ParticipantRepository;
@@ -88,6 +89,34 @@ class RoomServiceTest {
     }
 
     @Test
+    @DisplayName("유저가 방을 나갈 때 실시간 업데이트 응답을 반환한다")
+    void leaveRoom_ReturnRoomUpdateResponse() {
+        Long userId = 1L;
+        User user = mock(User.class);
+        given(user.getNickname()).willReturn("채은");
+
+        Room room = mock(Room.class);
+        given(room.getId()).willReturn(10L);
+        doReturn((short) 2).when(room).getCurPlayers(); // 남은 인원이 있는 경우
+
+        Participant participant = mock(Participant.class);
+        given(participant.getRoom()).willReturn(room);
+        given(participant.isHost()).willReturn(false);
+
+        given(userRepository.findById(userId)).willReturn(Optional.of(user));
+        given(participantRepository.findByUserId(user)).willReturn(Optional.of(participant));
+
+        RoomUpdateResponse response = roomService.leaveRoom(userId);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getRoomId()).isEqualTo(10L);
+        assertThat(response.getType()).isEqualTo("USER_LEAVE");
+        assertThat(response.getMessage()).contains("채은님이 퇴장하셨습니다.");
+
+        verify(participantRepository, times(1)).delete(participant);
+    }
+
+    @Test
     @DisplayName("게임 종료 성공 - 우승자 마킹 및 스탯이 업데이트된다")
     void finishGame_success() throws Exception {
 
@@ -142,11 +171,10 @@ class RoomServiceTest {
         room.addParticipant(hostPart);
         room.addParticipant(nextPart);
 
-        given(roomRepository.findById(roomId)).willReturn(Optional.of(room));
         given(userRepository.findById(hostId)).willReturn(Optional.of(hostUser));
-        given(participantRepository.findByRoomAndUserId(room, hostUser)).willReturn(Optional.of(hostPart));
+        given(participantRepository.findByUserId(hostUser)).willReturn(Optional.of(hostPart));
 
-        roomService.leaveRoom(roomId, hostId);
+        roomService.leaveRoom(hostId);
 
         assertThat(room.getHostId()).isEqualTo(nextHostId);
         assertThat(nextPart.isHost()).isTrue();

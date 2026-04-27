@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import backend.drawrace.domain.room.entity.Participant;
@@ -59,6 +60,9 @@ class RoundServiceTest {
 
     @Mock
     private RoundValidator roundValidator;
+
+    @Mock
+    private SimpMessagingTemplate messagingTemplate;
 
     @Mock
     private AiInferenceService aiInferenceService;
