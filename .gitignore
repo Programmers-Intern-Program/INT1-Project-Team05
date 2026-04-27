@@ -38,4 +38,4 @@ out/
 
 .env
 .env.*
-!.env.example
+!.env.examplesrc/main/resources/quickdraw/
