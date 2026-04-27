@@ -8,7 +8,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import backend.drawrace.global.config.AiProperties;
-import backend.drawrace.global.exception.ServiceException;
 
 class GatewayKeywordGeneratorTest {
 
@@ -83,12 +82,11 @@ class GatewayKeywordGeneratorTest {
     }
 
     @Test
-    @DisplayName("응답이 null이면 예외가 발생한다")
-    void extractContent_nullResponse() {
-        assertThatThrownBy(() -> invokeExtractContent(null))
-                .rootCause()
-                .isInstanceOf(ServiceException.class)
-                .hasMessageContaining("AI 응답이 올바르지 않습니다");
+    @DisplayName("응답이 null이면 빈 문자열을 반환한다")
+    void extractContent_nullResponse_returnsEmptyString() throws Exception {
+        String result = invokeExtractContent(null);
+
+        assertThat(result).isEmpty();
     }
 
     private String invokeSanitizeKeyword(String content) throws Exception {

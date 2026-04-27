@@ -1,6 +1,7 @@
 package backend.drawrace.domain.round.service;
 
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
@@ -9,10 +10,11 @@ import org.springframework.web.client.RestClient;
 import backend.drawrace.domain.round.dto.gateway.GatewayChatRequest;
 import backend.drawrace.domain.round.dto.gateway.GatewayChatResponse;
 import backend.drawrace.global.config.AiProperties;
-import backend.drawrace.global.exception.ServiceException;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @ConditionalOnProperty(name = "ai.mode", havingValue = "gateway")
 @RequiredArgsConstructor
@@ -20,39 +22,48 @@ public class GatewayKeywordGenerator implements KeywordGenerator {
 
     private final AiProperties aiProperties;
 
+    private static final List<String> FALLBACK_KEYWORDS = List.of("사과", "자동차", "고양이", "비행기", "의자");
+
     /**
      * AI Gateway를 호출해 게임용 제시어를 생성한다.
+     * 실패하거나 응답이 이상하면 fallback 키워드를 반환한다.
      */
     @Override
     public String generateKeyword() {
-        RestClient restClient = RestClient.builder()
-                .baseUrl(aiProperties.baseUrl())
-                .defaultHeader("Authorization", "Bearer " + aiProperties.apiKey())
-                .build();
+        try {
+            RestClient restClient = RestClient.builder()
+                    .baseUrl(aiProperties.baseUrl())
+                    .defaultHeader("Authorization", "Bearer " + aiProperties.apiKey())
+                    .build();
 
-        GatewayChatRequest request = GatewayChatRequest.builder()
-                .model(aiProperties.model())
-                .temperature(0.8)
-                .messages(List.of(
-                        GatewayChatRequest.systemMessage(buildSystemPrompt()),
-                        GatewayChatRequest.userMessage(buildUserPrompt())))
-                .build();
+            GatewayChatRequest request = GatewayChatRequest.builder()
+                    .model(aiProperties.model())
+                    .temperature(0.8)
+                    .messages(List.of(
+                            GatewayChatRequest.systemMessage(buildSystemPrompt()),
+                            GatewayChatRequest.userMessage(buildUserPrompt())))
+                    .build();
 
-        GatewayChatResponse response = restClient
-                .post()
-                .uri("/chat/completions")
-                .body(request)
-                .retrieve()
-                .body(GatewayChatResponse.class);
+            GatewayChatResponse response = restClient
+                    .post()
+                    .uri("/chat/completions")
+                    .body(request)
+                    .retrieve()
+                    .body(GatewayChatResponse.class);
 
-        String content = extractContent(response).trim();
-        String keyword = sanitizeKeyword(content);
+            String content = extractContent(response).trim();
+            String keyword = sanitizeKeyword(content);
 
-        if (keyword.isBlank()) {
-            throw new ServiceException("500-1", "AI 제시어 생성에 실패했습니다.");
+            if (keyword.isBlank()) {
+                log.warn("AI 제시어 응답이 비어 있어 fallback 키워드를 사용합니다. content={}", content);
+                return getFallbackKeyword();
+            }
+
+            return keyword;
+        } catch (Exception e) {
+            log.warn("AI 제시어 생성 실패로 fallback 키워드를 사용합니다.", e);
+            return getFallbackKeyword();
         }
-
-        return keyword;
     }
 
     /**
@@ -91,7 +102,7 @@ public class GatewayKeywordGenerator implements KeywordGenerator {
                 || response.getChoices().isEmpty()
                 || response.getChoices().get(0).getMessage() == null
                 || response.getChoices().get(0).getMessage().getContent() == null) {
-            throw new ServiceException("500-1", "AI 응답이 올바르지 않습니다.");
+            return "";
         }
         return response.getChoices().get(0).getMessage().getContent();
     }
@@ -117,5 +128,13 @@ public class GatewayKeywordGenerator implements KeywordGenerator {
         cleaned = cleaned.replaceAll("\\s+", "");
 
         return cleaned;
+    }
+
+    /**
+     * fallback 키워드 목록에서 랜덤으로 하나를 선택한다.
+     */
+    private String getFallbackKeyword() {
+        int index = ThreadLocalRandom.current().nextInt(FALLBACK_KEYWORDS.size());
+        return FALLBACK_KEYWORDS.get(index);
     }
 }

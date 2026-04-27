@@ -103,6 +103,8 @@ public class RoundService {
         roundValidator.validateNotSubmitted(alreadySubmitted);
 
         // AI 판독 수행
+        // - 내부적으로 1회 재시도
+        // - 최종 실패 시 예외를 던져 제출을 실패 처리한다
         AiInferenceResponse aiResult = aiInferenceService.infer(request.getImageData(), round.getKeyword());
 
         // 제출 기록 저장
