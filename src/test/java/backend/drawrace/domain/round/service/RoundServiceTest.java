@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 
 import java.lang.reflect.Field;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -146,13 +147,16 @@ class RoundServiceTest {
         SubmitDrawingResponse response = roundService.submitDrawing(roundId, 1L, request);
 
         assertThat(response.getRoundId()).isEqualTo(roundId);
-        assertThat(response.getAiAnswer()).isEqualTo("사과");
-        assertThat(response.getScore()).isEqualTo(0.88);
+        assertThat(response.getSubmittedAiAnswer()).isEqualTo("사과");
+        assertThat(response.getSubmittedScore()).isEqualTo(0.88);
         assertThat(response.getSubmittedCount()).isEqualTo(1);
         assertThat(response.getTotalParticipantCount()).isEqualTo(2);
         assertThat(response.isRoundFinished()).isFalse();
         assertThat(response.isGameFinished()).isFalse();
         assertThat(response.isTieBreakerStarted()).isFalse();
+        assertThat(response.getRoundWinnerParticipantId()).isNull();
+        assertThat(response.getRoundWinnerAiAnswer()).isNull();
+        assertThat(response.getRoundWinnerScore()).isNull();
 
         assertThat(round.getStatus()).isEqualTo(RoundStatus.IN_PROGRESS);
         assertThat(participant.getRoundWinCount()).isEqualTo(0);
@@ -200,15 +204,165 @@ class RoundServiceTest {
         SubmitDrawingResponse response = roundService.submitDrawing(roundId, 1L, request);
 
         assertThat(response.getRoundId()).isEqualTo(roundId);
+        assertThat(response.getSubmittedAiAnswer()).isEqualTo("사과");
+        assertThat(response.getSubmittedScore()).isEqualTo(0.95);
         assertThat(response.isRoundFinished()).isTrue();
         assertThat(response.isGameFinished()).isFalse();
         assertThat(response.isTieBreakerStarted()).isFalse();
         assertThat(response.getRoundWinnerParticipantId()).isEqualTo(participantId);
+        assertThat(response.getRoundWinnerAiAnswer()).isEqualTo("사과");
+        assertThat(response.getRoundWinnerScore()).isEqualTo(0.95);
         assertThat(response.getNextRoundId()).isEqualTo(20L);
         assertThat(response.getNextRoundNumber()).isEqualTo(2);
         assertThat(response.isNextRoundTieBreaker()).isFalse();
 
         assertThat(participant.getRoundWinCount()).isEqualTo(1);
+        assertThat(round.getStatus()).isEqualTo(RoundStatus.FINISHED);
+        assertThat(round.isActive()).isFalse();
+
+        then(roundParticipantRepository)
+                .should()
+                .saveAll(argThat((Iterable<RoundParticipant> iterable) -> countIterable(iterable) == 2));
+    }
+
+    @Test
+    @DisplayName("라운드 종료 시 현재 제출자 점수와 라운드 승자 점수를 따로 반환한다")
+    void submitDrawing_finishRound_separateSubmittedScoreAndWinnerScore() throws Exception {
+        Long roomId = 1L;
+        Long roundId = 10L;
+        Long participantId = 100L;
+
+        Room room = createRoom(roomId, true, 1L);
+        setField(room, "totalRounds", (short) 3);
+
+        Round round = createInProgressRound(roundId, room, 1, "사과");
+        Participant participant = createParticipant(participantId, room, 0);
+        Participant winnerParticipant = createParticipant(101L, room, 0);
+
+        SubmitDrawingRequest request = createSubmitDrawingRequest(participantId, "dummy-image");
+
+        // 현재 요청자는 마지막 제출자지만 점수는 낮다
+        RoundSubmission currentSubmission =
+                RoundSubmission.create(round, participant, "dummy-image", "강아지", 0.30);
+
+        // 다른 참가자가 더 높은 점수로 라운드 승자다
+        RoundSubmission winnerSubmission =
+                RoundSubmission.create(round, winnerParticipant, "winner-image", "사과", 0.95);
+
+        given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
+        given(participantRepository.findByIdAndRoomId(participantId, roomId)).willReturn(Optional.of(participant));
+        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(true);
+        given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(false);
+        given(aiInferenceService.infer("dummy-image", "사과"))
+                .willReturn(new AiInferenceResponse("강아지", 0.30));
+        given(roundSubmissionRepository.countByRoundId(roundId)).willReturn(2L);
+        given(roundParticipantRepository.countByRoundId(roundId)).willReturn(2L);
+        given(roundSubmissionRepository.findByRoundId(roundId))
+                .willReturn(List.of(currentSubmission, winnerSubmission));
+        given(keywordGenerator.generateKeyword()).willReturn("자동차");
+        given(participantRepository.findByRoomId(roomId)).willReturn(List.of(participant, winnerParticipant));
+        given(roundRepository.save(any(Round.class))).willAnswer(invocation -> {
+            Round saved = invocation.getArgument(0);
+            setField(saved, "id", 20L);
+            return saved;
+        });
+
+        SubmitDrawingResponse response = roundService.submitDrawing(roundId, 1L, request);
+
+        assertThat(response.getRoundId()).isEqualTo(roundId);
+        assertThat(response.isRoundFinished()).isTrue();
+        assertThat(response.isGameFinished()).isFalse();
+        assertThat(response.isTieBreakerStarted()).isFalse();
+
+        // 이번 요청으로 제출한 사람의 결과
+        assertThat(response.getSubmittedAiAnswer()).isEqualTo("강아지");
+        assertThat(response.getSubmittedScore()).isEqualTo(0.30);
+
+        // 라운드 승자의 결과
+        assertThat(response.getRoundWinnerParticipantId()).isEqualTo(winnerParticipant.getId());
+        assertThat(response.getRoundWinnerAiAnswer()).isEqualTo("사과");
+        assertThat(response.getRoundWinnerScore()).isEqualTo(0.95);
+
+        assertThat(response.getNextRoundId()).isEqualTo(20L);
+        assertThat(response.getNextRoundNumber()).isEqualTo(2);
+        assertThat(response.isNextRoundTieBreaker()).isFalse();
+
+        assertThat(participant.getRoundWinCount()).isEqualTo(0);
+        assertThat(winnerParticipant.getRoundWinCount()).isEqualTo(1);
+        assertThat(round.getStatus()).isEqualTo(RoundStatus.FINISHED);
+        assertThat(round.isActive()).isFalse();
+    }
+
+    @Test
+    @DisplayName("라운드 점수가 같으면 먼저 제출한 참가자를 승자로 선정한다")
+    void submitDrawing_finishRound_sameScoreWinnerIsEarlierSubmission() throws Exception {
+        Long roomId = 1L;
+        Long roundId = 10L;
+        Long participantId = 100L;
+
+        Room room = createRoom(roomId, true, 1L);
+        setField(room, "totalRounds", (short) 3);
+
+        Round round = createInProgressRound(roundId, room, 1, "사과");
+        Participant participant = createParticipant(participantId, room, 0);
+        Participant earlierParticipant = createParticipant(101L, room, 0);
+
+        SubmitDrawingRequest request = createSubmitDrawingRequest(participantId, "dummy-image");
+
+        // 현재 요청자는 마지막 제출자이고, 점수는 동일하다
+        RoundSubmission currentSubmission =
+                RoundSubmission.create(round, participant, "dummy-image", "사과", 0.95);
+
+        // 다른 참가자가 같은 점수지만 더 먼저 제출했다
+        RoundSubmission earlierSubmission =
+                RoundSubmission.create(round, earlierParticipant, "earlier-image", "사과", 0.95);
+
+        setCreatedAt(earlierSubmission, LocalDateTime.of(2026, 1, 1, 10, 0));
+        setCreatedAt(currentSubmission, LocalDateTime.of(2026, 1, 1, 10, 1));
+
+        given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
+        given(participantRepository.findByIdAndRoomId(participantId, roomId)).willReturn(Optional.of(participant));
+        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(true);
+        given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(false);
+        given(aiInferenceService.infer("dummy-image", "사과"))
+                .willReturn(new AiInferenceResponse("사과", 0.95));
+        given(roundSubmissionRepository.countByRoundId(roundId)).willReturn(2L);
+        given(roundParticipantRepository.countByRoundId(roundId)).willReturn(2L);
+        given(roundSubmissionRepository.findByRoundId(roundId))
+                .willReturn(List.of(currentSubmission, earlierSubmission));
+        given(keywordGenerator.generateKeyword()).willReturn("자동차");
+        given(participantRepository.findByRoomId(roomId)).willReturn(List.of(participant, earlierParticipant));
+        given(roundRepository.save(any(Round.class))).willAnswer(invocation -> {
+            Round saved = invocation.getArgument(0);
+            setField(saved, "id", 20L);
+            return saved;
+        });
+
+        SubmitDrawingResponse response = roundService.submitDrawing(roundId, 1L, request);
+
+        assertThat(response.isRoundFinished()).isTrue();
+        assertThat(response.isGameFinished()).isFalse();
+        assertThat(response.isTieBreakerStarted()).isFalse();
+
+        // 이번 요청으로 제출한 사람의 결과
+        assertThat(response.getSubmittedAiAnswer()).isEqualTo("사과");
+        assertThat(response.getSubmittedScore()).isEqualTo(0.95);
+
+        // 같은 점수면 먼저 제출한 참가자가 라운드 승자
+        assertThat(response.getRoundWinnerParticipantId()).isEqualTo(earlierParticipant.getId());
+        assertThat(response.getRoundWinnerAiAnswer()).isEqualTo("사과");
+        assertThat(response.getRoundWinnerScore()).isEqualTo(0.95);
+
+        assertThat(response.getNextRoundId()).isEqualTo(20L);
+        assertThat(response.getNextRoundNumber()).isEqualTo(2);
+        assertThat(response.isNextRoundTieBreaker()).isFalse();
+
+        assertThat(participant.getRoundWinCount()).isEqualTo(0);
+        assertThat(earlierParticipant.getRoundWinCount()).isEqualTo(1);
         assertThat(round.getStatus()).isEqualTo(RoundStatus.FINISHED);
         assertThat(round.isActive()).isFalse();
 
@@ -253,7 +407,11 @@ class RoundServiceTest {
         assertThat(response.isRoundFinished()).isTrue();
         assertThat(response.isGameFinished()).isTrue();
         assertThat(response.isTieBreakerStarted()).isFalse();
+        assertThat(response.getSubmittedAiAnswer()).isEqualTo("사과");
+        assertThat(response.getSubmittedScore()).isEqualTo(0.92);
         assertThat(response.getRoundWinnerParticipantId()).isEqualTo(participantId);
+        assertThat(response.getRoundWinnerAiAnswer()).isEqualTo("사과");
+        assertThat(response.getRoundWinnerScore()).isEqualTo(0.92);
         assertThat(response.getFinalWinnerParticipantId()).isEqualTo(participantId);
 
         assertThat(participant.getRoundWinCount()).isEqualTo(2);
@@ -303,7 +461,11 @@ class RoundServiceTest {
         assertThat(response.isRoundFinished()).isTrue();
         assertThat(response.isGameFinished()).isFalse();
         assertThat(response.isTieBreakerStarted()).isTrue();
+        assertThat(response.getSubmittedAiAnswer()).isEqualTo("사과");
+        assertThat(response.getSubmittedScore()).isEqualTo(0.97);
         assertThat(response.getRoundWinnerParticipantId()).isEqualTo(participantId);
+        assertThat(response.getRoundWinnerAiAnswer()).isEqualTo("사과");
+        assertThat(response.getRoundWinnerScore()).isEqualTo(0.97);
         assertThat(response.getNextRoundId()).isEqualTo(40L);
         assertThat(response.getNextRoundNumber()).isEqualTo(4);
         assertThat(response.isNextRoundTieBreaker()).isTrue();
@@ -350,11 +512,75 @@ class RoundServiceTest {
         assertThat(response.isRoundFinished()).isTrue();
         assertThat(response.isGameFinished()).isTrue();
         assertThat(response.isTieBreakerStarted()).isFalse();
+        assertThat(response.getSubmittedAiAnswer()).isEqualTo("사과");
+        assertThat(response.getSubmittedScore()).isEqualTo(0.99);
         assertThat(response.getRoundWinnerParticipantId()).isEqualTo(participantId);
+        assertThat(response.getRoundWinnerAiAnswer()).isEqualTo("사과");
+        assertThat(response.getRoundWinnerScore()).isEqualTo(0.99);
         assertThat(response.getFinalWinnerParticipantId()).isEqualTo(participantId);
 
         assertThat(participant.getRoundWinCount()).isEqualTo(3);
         assertThat(participant.isWinner()).isTrue();
+        assertThat(room.isPlaying()).isFalse();
+    }
+
+    @Test
+    @DisplayName("결승 라운드에서 점수가 같으면 먼저 제출한 참가자를 최종 우승자로 선정한다")
+    void submitDrawing_finishTieBreaker_sameScoreWinnerIsEarlierSubmission() throws Exception {
+        Long roomId = 1L;
+        Long roundId = 50L;
+        Long participantId = 100L;
+
+        Room room = createRoom(roomId, true, 1L);
+        Round round = createTieBreakerRound(roundId, room, 4, "사과");
+        Participant participant = createParticipant(participantId, room, 2);
+        Participant earlierParticipant = createParticipant(101L, room, 2);
+
+        SubmitDrawingRequest request = createSubmitDrawingRequest(participantId, "dummy-image");
+
+        // 현재 요청자는 마지막 제출자이고, 점수는 동일하다
+        RoundSubmission currentSubmission =
+                RoundSubmission.create(round, participant, "dummy-image", "사과", 0.95);
+
+        // 다른 참가자가 같은 점수지만 더 먼저 제출했다
+        RoundSubmission earlierSubmission =
+                RoundSubmission.create(round, earlierParticipant, "earlier-image", "사과", 0.95);
+
+        setCreatedAt(earlierSubmission, LocalDateTime.of(2026, 1, 1, 10, 0));
+        setCreatedAt(currentSubmission, LocalDateTime.of(2026, 1, 1, 10, 1));
+
+        given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
+        given(participantRepository.findByIdAndRoomId(participantId, roomId)).willReturn(Optional.of(participant));
+        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(true);
+        given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(false);
+        given(aiInferenceService.infer("dummy-image", "사과"))
+                .willReturn(new AiInferenceResponse("사과", 0.95));
+        given(roundSubmissionRepository.countByRoundId(roundId)).willReturn(2L);
+        given(roundParticipantRepository.countByRoundId(roundId)).willReturn(2L);
+        given(roundSubmissionRepository.findByRoundId(roundId))
+                .willReturn(List.of(currentSubmission, earlierSubmission));
+
+        SubmitDrawingResponse response = roundService.submitDrawing(roundId, 1L, request);
+
+        assertThat(response.isRoundFinished()).isTrue();
+        assertThat(response.isGameFinished()).isTrue();
+        assertThat(response.isTieBreakerStarted()).isFalse();
+
+        // 이번 요청으로 제출한 사람의 결과
+        assertThat(response.getSubmittedAiAnswer()).isEqualTo("사과");
+        assertThat(response.getSubmittedScore()).isEqualTo(0.95);
+
+        // 결승 라운드에서도 같은 점수면 먼저 제출한 참가자가 최종 우승자
+        assertThat(response.getRoundWinnerParticipantId()).isEqualTo(earlierParticipant.getId());
+        assertThat(response.getRoundWinnerAiAnswer()).isEqualTo("사과");
+        assertThat(response.getRoundWinnerScore()).isEqualTo(0.95);
+        assertThat(response.getFinalWinnerParticipantId()).isEqualTo(earlierParticipant.getId());
+
+        assertThat(participant.getRoundWinCount()).isEqualTo(2);
+        assertThat(earlierParticipant.getRoundWinCount()).isEqualTo(3);
+        assertThat(earlierParticipant.isWinner()).isTrue();
         assertThat(room.isPlaying()).isFalse();
     }
 
@@ -537,6 +763,12 @@ class RoundServiceTest {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.set(target, value);
+    }
+
+    private void setCreatedAt(Object target, LocalDateTime createdAt) throws Exception {
+        Field field = target.getClass().getSuperclass().getDeclaredField("createdAt");
+        field.setAccessible(true);
+        field.set(target, createdAt);
     }
 
     private int countIterable(Iterable<RoundParticipant> iterable) {

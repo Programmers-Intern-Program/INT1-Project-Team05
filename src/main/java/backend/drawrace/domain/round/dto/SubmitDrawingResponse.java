@@ -8,8 +8,10 @@ import lombok.Getter;
 public class SubmitDrawingResponse {
 
     private Long roundId;
-    private String aiAnswer;
-    private double score;
+
+    // 제출한 사람의 AI 판별 결과
+    private String submittedAiAnswer;
+    private double submittedScore;
 
     private int submittedCount;
     private int totalParticipantCount;
@@ -19,6 +21,10 @@ public class SubmitDrawingResponse {
     private boolean tieBreakerStarted;
 
     private Long roundWinnerParticipantId;
+
+    // 라운드 승자의 AI 판별 결과
+    private String roundWinnerAiAnswer;
+    private Double roundWinnerScore;
 
     private Long nextRoundId;
     private Integer nextRoundNumber;
