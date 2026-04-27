@@ -53,7 +53,11 @@ class RoomServiceTest {
     void createRoom_success() throws Exception {
         Long userId = 1L;
         CreateRoomReq req = new CreateRoomReq("테스트 방", (short) 4, (short) 3, "1234");
-        User user = User.builder().email("test@test.com").nickname("유저A").isAi(false).build();
+        User user = User.builder()
+                .email("test@test.com")
+                .nickname("유저A")
+                .isAi(false)
+                .build();
 
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(roomRepository.save(any(Room.class))).willAnswer(inv -> {

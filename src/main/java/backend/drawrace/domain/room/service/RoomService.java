@@ -135,8 +135,7 @@ public class RoomService {
 
     @Transactional
     public RoomInfoRes addAiParticipant(Long roomId, Long hostId) {
-        Room room = roomRepository.findById(roomId)
-                .orElseThrow(() -> new ServiceException("404-2", "방을 찾을 수 없습니다."));
+        Room room = roomRepository.findById(roomId).orElseThrow(() -> new ServiceException("404-2", "방을 찾을 수 없습니다."));
 
         // 방장만 AI 추가 가능
         if (!room.getHostId().equals(hostId)) {
@@ -151,14 +150,11 @@ public class RoomService {
             throw new ServiceException("400-3", "방 인원이 초과되었습니다.");
         }
 
-        User aiUser = userRepository.findByIsAi(true)
-                .orElseThrow(() -> new ServiceException("404-1", "AI 유저를 찾을 수 없습니다."));
+        User aiUser =
+                userRepository.findByIsAi(true).orElseThrow(() -> new ServiceException("404-1", "AI 유저를 찾을 수 없습니다."));
 
-        Participant aiParticipant = Participant.builder()
-                .userId(aiUser)
-                .room(room)
-                .isHost(false)
-                .build();
+        Participant aiParticipant =
+                Participant.builder().userId(aiUser).room(room).isHost(false).build();
 
         participantRepository.save(aiParticipant);
         room.addParticipant(aiParticipant);

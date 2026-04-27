@@ -92,8 +92,7 @@ public class RoomController {
 
     @PostMapping("/{roomId}/ai-participants")
     public RsData<RoomInfoRes> addAiParticipant(
-            @PathVariable Long roomId,
-            @AuthenticationPrincipal SecurityUser securityUser) {
+            @PathVariable Long roomId, @AuthenticationPrincipal SecurityUser securityUser) {
 
         RoomInfoRes res = roomService.addAiParticipant(roomId, securityUser.getUserId());
         return new RsData<>("200-6", "AI 참가자를 추가했습니다.", res);

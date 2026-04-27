@@ -12,8 +12,6 @@ import backend.drawrace.domain.round.dto.gateway.GatewayChatResponse;
 import backend.drawrace.global.config.AiProperties;
 import backend.drawrace.global.exception.ServiceException;
 
-import lombok.RequiredArgsConstructor;
-
 @Service
 @ConditionalOnProperty(name = "ai.mode", havingValue = "gateway")
 public class GatewayAiDrawingService implements AiDrawingService {
@@ -36,8 +34,7 @@ public class GatewayAiDrawingService implements AiDrawingService {
                 .temperature(0.5)
                 .messages(List.of(
                         GatewayChatRequest.systemMessage(buildSystemPrompt()),
-                        GatewayChatRequest.userMessage(
-                                GatewayChatRequest.textContent(buildUserPrompt(keyword)))))
+                        GatewayChatRequest.userMessage(GatewayChatRequest.textContent(buildUserPrompt(keyword)))))
                 .build();
 
         GatewayChatResponse response = restClient
@@ -50,8 +47,7 @@ public class GatewayAiDrawingService implements AiDrawingService {
         String svgContent = extractContent(response);
         String cleaned = sanitizeSvg(svgContent);
 
-        return "data:image/svg+xml;base64,"
-                + Base64.getEncoder().encodeToString(cleaned.getBytes());
+        return "data:image/svg+xml;base64," + Base64.getEncoder().encodeToString(cleaned.getBytes());
     }
 
     private String buildSystemPrompt() {
@@ -87,8 +83,7 @@ public class GatewayAiDrawingService implements AiDrawingService {
     }
 
     private String sanitizeSvg(String content) {
-        String cleaned = content
-                .replace("```svg", "")
+        String cleaned = content.replace("```svg", "")
                 .replace("```xml", "")
                 .replace("```", "")
                 .trim();
