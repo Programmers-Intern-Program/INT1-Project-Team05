@@ -16,10 +16,8 @@ import backend.drawrace.global.exception.ServiceException;
 
 class GatewayAiInferenceServiceTest {
 
-    private final GatewayAiInferenceService gatewayAiInferenceService =
-            new GatewayAiInferenceService(
-                    new AiProperties("http://test", "test-key", "test-model"),
-                    new ObjectMapper());
+    private final GatewayAiInferenceService gatewayAiInferenceService = new GatewayAiInferenceService(
+            new AiProperties("http://test", "test-key", "test-model"), new ObjectMapper());
 
     @Test
     @DisplayName("코드블록으로 감싸진 JSON 응답에서 JSON 본문만 추출한다")
@@ -96,8 +94,7 @@ class GatewayAiInferenceServiceTest {
         setField(result, "aiAnswer", "사과");
         setField(result, "score", 0.77);
 
-        assertThatCode(() -> invokeValidateInferenceResult(result))
-                .doesNotThrowAnyException();
+        assertThatCode(() -> invokeValidateInferenceResult(result)).doesNotThrowAnyException();
     }
 
     @Test
@@ -192,8 +189,7 @@ class GatewayAiInferenceServiceTest {
 
     private void invokeValidateInferenceResult(GatewayInferenceResult result) throws Exception {
         Method method = GatewayAiInferenceService.class.getDeclaredMethod(
-                "validateInferenceResult",
-                GatewayInferenceResult.class);
+                "validateInferenceResult", GatewayInferenceResult.class);
         method.setAccessible(true);
 
         try {
@@ -207,9 +203,7 @@ class GatewayAiInferenceServiceTest {
     }
 
     private String invokeExtractContent(GatewayChatResponse response) throws Exception {
-        Method method = GatewayAiInferenceService.class.getDeclaredMethod(
-                "extractContent",
-                GatewayChatResponse.class);
+        Method method = GatewayAiInferenceService.class.getDeclaredMethod("extractContent", GatewayChatResponse.class);
         method.setAccessible(true);
 
         try {
