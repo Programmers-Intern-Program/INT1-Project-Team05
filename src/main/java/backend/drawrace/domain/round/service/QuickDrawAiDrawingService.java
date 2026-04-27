@@ -78,31 +78,4 @@ public class QuickDrawAiDrawingService implements AiDrawingService {
             throw new ServiceException("500-1", "QuickDraw 데이터 파싱에 실패했습니다.");
         }
     }
-
-    private enum QuickDrawKeyword {
-        사과("apple"),
-        자동차("car"),
-        고양이("cat"),
-        비행기("airplane"),
-        의자("chair");
-
-        private final String filename;
-
-        QuickDrawKeyword(String filename) {
-            this.filename = filename;
-        }
-
-        public String getFilename() {
-            return filename;
-        }
-
-        public static QuickDrawKeyword from(String keyword) {
-            for (QuickDrawKeyword k : values()) {
-                if (k.name().equals(keyword)) {
-                    return k;
-                }
-            }
-            throw new ServiceException("400-1", "지원하지 않는 키워드입니다: " + keyword);
-        }
-    }
 }
