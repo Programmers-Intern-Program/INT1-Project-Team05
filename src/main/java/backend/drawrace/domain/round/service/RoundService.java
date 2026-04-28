@@ -6,6 +6,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import backend.drawrace.domain.chat.dto.ChatMessageDto;
 import backend.drawrace.domain.room.entity.Participant;
 import backend.drawrace.domain.room.entity.Room;
 import backend.drawrace.domain.room.repository.ParticipantRepository;
@@ -68,6 +69,14 @@ public class RoundService {
         saveRoundParticipants(savedRound, participants);
 
         RoundStartResponse response = RoundStartResponse.from(savedRound);
+
+        ChatMessageDto startNotice = ChatMessageDto.builder()
+                .type(ChatMessageDto.MessageType.NOTICE)
+                .roomId(roomId)
+                .sender("System")
+                .message("게임이 시작되었습니다! 주제에 맞춰 그림을 그려주세요.")
+                .build();
+        messagingTemplate.convertAndSend("/sub/rooms/" + roomId + "/chat", startNotice);
 
         messagingTemplate.convertAndSend("/sub/rooms/" + roomId, response);
 
@@ -197,6 +206,18 @@ public class RoundService {
         roundWinner.increaseRoundWinCount();
         round.finish();
 
+        Long roomId = round.getRoom().getId();
+        String winnerNickname = roundWinner.getUserId().getNickname();
+
+        // [시스템 메시지 발송] 라운드 승리자 공지
+        ChatMessageDto winnerNotice = ChatMessageDto.builder()
+                .type(ChatMessageDto.MessageType.WINNER)
+                .roomId(roomId)
+                .sender("System")
+                .message("라운드 승리자: " + winnerNickname + "님! 축하합니다.")
+                .build();
+        messagingTemplate.convertAndSend("/sub/rooms/" + roomId + "/chat", winnerNotice);
+
         return handleAfterRoundFinished(round, aiResult, submittedCount, totalParticipantCount, roundWinner);
     }
 
@@ -219,6 +240,8 @@ public class RoundService {
         if (round.isTiebreaker()) {
             roundWinner.markWinner();
             room.finishGame();
+
+            sendFinalWinnerNotice(room.getId(), roundWinner.getUserId().getNickname());
 
             return SubmitDrawingResponse.builder()
                     .roundId(round.getId())
@@ -281,6 +304,8 @@ public class RoundService {
             Participant finalWinner = topScorers.get(0);
             finalWinner.markWinner();
             room.finishGame();
+
+            sendFinalWinnerNotice(room.getId(), finalWinner.getUserId().getNickname());
 
             return SubmitDrawingResponse.builder()
                     .roundId(round.getId())
@@ -365,5 +390,15 @@ public class RoundService {
         return participants.stream()
                 .filter(participant -> participant.getRoundWinCount() == maxWinCount)
                 .toList();
+    }
+
+    private void sendFinalWinnerNotice(Long roomId, String nickname) {
+        ChatMessageDto finalWinnerNotice = ChatMessageDto.builder()
+                .type(ChatMessageDto.MessageType.WINNER)
+                .roomId(roomId)
+                .sender("System")
+                .message("🎉 축하합니다! 최종 우승자는 " + nickname + "님입니다! 🎉")
+                .build();
+        messagingTemplate.convertAndSend("/sub/rooms/" + roomId + "/chat", finalWinnerNotice);
     }
 }
