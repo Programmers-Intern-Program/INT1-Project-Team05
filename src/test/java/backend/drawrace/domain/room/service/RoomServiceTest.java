@@ -17,7 +17,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
+import backend.drawrace.domain.chat.dto.ChatMessageDto;
 import backend.drawrace.domain.room.dto.request.CreateRoomReq;
 import backend.drawrace.domain.room.dto.response.RoomInfoRes;
 import backend.drawrace.domain.room.dto.response.RoomUpdateResponse;
@@ -44,6 +46,9 @@ class RoomServiceTest {
 
     @Mock
     private RankingService rankingService;
+
+    @Mock
+    private SimpMessagingTemplate messagingTemplate;
 
     @InjectMocks
     private RoomService roomService;
@@ -93,7 +98,7 @@ class RoomServiceTest {
     void leaveRoom_ReturnRoomUpdateResponse() {
         Long userId = 1L;
         User user = mock(User.class);
-        given(user.getNickname()).willReturn("채은");
+        given(user.getNickname()).willReturn("유저A");
 
         Room room = mock(Room.class);
         given(room.getId()).willReturn(10L);
@@ -111,7 +116,7 @@ class RoomServiceTest {
         assertThat(response).isNotNull();
         assertThat(response.getRoomId()).isEqualTo(10L);
         assertThat(response.getType()).isEqualTo("USER_LEAVE");
-        assertThat(response.getMessage()).contains("채은님이 퇴장하셨습니다.");
+        assertThat(response.getMessage()).contains("유저A님이 퇴장하셨습니다.");
 
         verify(participantRepository, times(1)).delete(participant);
     }
@@ -179,6 +184,52 @@ class RoomServiceTest {
         assertThat(room.getHostId()).isEqualTo(nextHostId);
         assertThat(nextPart.isHost()).isTrue();
         verify(participantRepository).delete(hostPart);
+    }
+
+    @Test
+    @DisplayName("유저 퇴장 시 퇴장 알림과 방장 위임 알림이 채팅창에 전달된다")
+    void leaveRoom_ShouldSendSystemNotice() {
+        // 1. Given: 테스트에 필요한 가짜 객체(Mock) 설정
+        Long userId = 1L;
+        Long roomId = 10L;
+
+        User user = mock(User.class);
+        lenient().when(user.getId()).thenReturn(userId);
+        lenient().when(user.getNickname()).thenReturn("유저A");
+
+        Room room = mock(Room.class);
+        lenient().when(room.getId()).thenReturn(roomId);
+        lenient().when(room.getCurPlayers()).thenReturn((short) 2); // 2명 있는 방
+
+        Participant participant = mock(Participant.class);
+        lenient().when(participant.getRoom()).thenReturn(room);
+        lenient().when(participant.isHost()).thenReturn(true); // 방장이 나가는 상황 가정
+        lenient().when(participant.getUserId()).thenReturn(user);
+
+        // 다음 방장이 될 사람 설정
+        Participant nextHost = mock(Participant.class);
+        User nextUser = mock(User.class);
+        lenient().when(nextUser.getNickname()).thenReturn("다음방장");
+        lenient().when(nextHost.getUserId()).thenReturn(nextUser);
+
+        given(userRepository.findById(userId)).willReturn(Optional.of(user));
+        given(participantRepository.findByUserId(user)).willReturn(Optional.of(participant));
+
+        lenient().when(room.getParticipants()).thenReturn(List.of(participant, nextHost));
+
+        roomService.leaveRoom(userId);
+
+        verify(messagingTemplate, atLeastOnce())
+                .convertAndSend(
+                        eq("/sub/rooms/" + roomId + "/chat"),
+                        argThat((ChatMessageDto dto) -> dto.getType() == ChatMessageDto.MessageType.NOTICE
+                                && dto.getMessage().contains("유저A님이 퇴장하셨습니다.")));
+
+        verify(messagingTemplate, atLeastOnce())
+                .convertAndSend(
+                        eq("/sub/rooms/" + roomId + "/chat"),
+                        argThat((ChatMessageDto dto) -> dto.getType() == ChatMessageDto.MessageType.NOTICE
+                                && dto.getMessage().contains("방장이 다음방장님으로 변경되었습니다.")));
     }
 
     private Room createRoom(Long id, String title, Long hostId) throws Exception {
