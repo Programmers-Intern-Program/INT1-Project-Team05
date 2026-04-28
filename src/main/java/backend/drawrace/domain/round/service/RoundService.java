@@ -128,8 +128,8 @@ public class RoundService {
         if (submittedCount < totalParticipantCount) {
             return SubmitDrawingResponse.builder()
                     .roundId(round.getId())
-                    .aiAnswer(aiResult.getAiAnswer())
-                    .score(aiResult.getScore())
+                    .submittedAiAnswer(aiResult.getAiAnswer())
+                    .submittedScore(aiResult.getScore())
                     .submittedCount((int) submittedCount)
                     .totalParticipantCount((int) totalParticipantCount)
                     .roundFinished(false)
@@ -194,12 +194,21 @@ public class RoundService {
      * 전원 제출 완료 시 승자를 선정하고 라운드를 종료한다.
      */
     private SubmitDrawingResponse handleRoundCompletion(
-            Round round, AiInferenceResponse aiResult, long submittedCount, long totalParticipantCount) {
+            Round round, AiInferenceResponse submittedAiResult, long submittedCount, long totalParticipantCount) {
 
         List<RoundSubmission> submissions = roundSubmissionRepository.findByRoundId(round.getId());
 
         RoundSubmission winnerSubmission = submissions.stream()
-                .max((a, b) -> Double.compare(a.getScore(), b.getScore()))
+                .sorted((a, b) -> {
+                    int scoreCompare = Double.compare(b.getScore(), a.getScore());
+
+                    if (scoreCompare != 0) {
+                        return scoreCompare;
+                    }
+
+                    return a.getCreatedAt().compareTo(b.getCreatedAt());
+                })
+                .findFirst()
                 .orElseThrow(() -> new ServiceException("500-1", "제출 기록이 존재하지 않습니다."));
 
         Participant roundWinner = winnerSubmission.getParticipant();
@@ -218,7 +227,8 @@ public class RoundService {
                 .build();
         messagingTemplate.convertAndSend("/sub/rooms/" + roomId + "/chat", winnerNotice);
 
-        return handleAfterRoundFinished(round, aiResult, submittedCount, totalParticipantCount, roundWinner);
+        return handleAfterRoundFinished(
+                round, submittedAiResult, winnerSubmission, submittedCount, totalParticipantCount, roundWinner);
     }
 
     /**
@@ -229,7 +239,8 @@ public class RoundService {
      */
     private SubmitDrawingResponse handleAfterRoundFinished(
             Round round,
-            AiInferenceResponse aiResult,
+            AiInferenceResponse submittedAiResult,
+            RoundSubmission winnerSubmission,
             long submittedCount,
             long totalParticipantCount,
             Participant roundWinner) {
@@ -245,14 +256,16 @@ public class RoundService {
 
             return SubmitDrawingResponse.builder()
                     .roundId(round.getId())
-                    .aiAnswer(aiResult.getAiAnswer())
-                    .score(aiResult.getScore())
+                    .submittedAiAnswer(submittedAiResult.getAiAnswer())
+                    .submittedScore(submittedAiResult.getScore())
                     .submittedCount((int) submittedCount)
                     .totalParticipantCount((int) totalParticipantCount)
                     .roundFinished(true)
                     .gameFinished(true)
                     .tieBreakerStarted(false)
                     .roundWinnerParticipantId(roundWinner.getId())
+                    .roundWinnerAiAnswer(winnerSubmission.getAiAnswer())
+                    .roundWinnerScore(winnerSubmission.getScore())
                     .finalWinnerParticipantId(roundWinner.getId())
                     .build();
         }
@@ -266,14 +279,16 @@ public class RoundService {
 
             return SubmitDrawingResponse.builder()
                     .roundId(round.getId())
-                    .aiAnswer(aiResult.getAiAnswer())
-                    .score(aiResult.getScore())
+                    .submittedAiAnswer(submittedAiResult.getAiAnswer())
+                    .submittedScore(submittedAiResult.getScore())
                     .submittedCount((int) submittedCount)
                     .totalParticipantCount((int) totalParticipantCount)
                     .roundFinished(true)
                     .gameFinished(false)
                     .tieBreakerStarted(false)
                     .roundWinnerParticipantId(roundWinner.getId())
+                    .roundWinnerAiAnswer(winnerSubmission.getAiAnswer())
+                    .roundWinnerScore(winnerSubmission.getScore())
                     .nextRoundId(nextRound.getId())
                     .nextRoundNumber(nextRound.getRoundNumber())
                     .nextRoundTieBreaker(false)
@@ -281,7 +296,8 @@ public class RoundService {
         }
 
         // 마지막 일반 라운드는 최종 우승 또는 결승 생성으로 처리
-        return handleLastNormalRound(round, aiResult, submittedCount, totalParticipantCount, roundWinner);
+        return handleLastNormalRound(
+                round, submittedAiResult, winnerSubmission, submittedCount, totalParticipantCount, roundWinner);
     }
 
     /**
@@ -291,7 +307,8 @@ public class RoundService {
      */
     private SubmitDrawingResponse handleLastNormalRound(
             Round round,
-            AiInferenceResponse aiResult,
+            AiInferenceResponse submittedAiResult,
+            RoundSubmission winnerSubmission,
             long submittedCount,
             long totalParticipantCount,
             Participant roundWinner) {
@@ -309,14 +326,16 @@ public class RoundService {
 
             return SubmitDrawingResponse.builder()
                     .roundId(round.getId())
-                    .aiAnswer(aiResult.getAiAnswer())
-                    .score(aiResult.getScore())
+                    .submittedAiAnswer(submittedAiResult.getAiAnswer())
+                    .submittedScore(submittedAiResult.getScore())
                     .submittedCount((int) submittedCount)
                     .totalParticipantCount((int) totalParticipantCount)
                     .roundFinished(true)
                     .gameFinished(true)
                     .tieBreakerStarted(false)
                     .roundWinnerParticipantId(roundWinner.getId())
+                    .roundWinnerAiAnswer(winnerSubmission.getAiAnswer())
+                    .roundWinnerScore(winnerSubmission.getScore())
                     .finalWinnerParticipantId(finalWinner.getId())
                     .build();
         }
@@ -327,14 +346,16 @@ public class RoundService {
 
         return SubmitDrawingResponse.builder()
                 .roundId(round.getId())
-                .aiAnswer(aiResult.getAiAnswer())
-                .score(aiResult.getScore())
+                .submittedAiAnswer(submittedAiResult.getAiAnswer())
+                .submittedScore(submittedAiResult.getScore())
                 .submittedCount((int) submittedCount)
                 .totalParticipantCount((int) totalParticipantCount)
                 .roundFinished(true)
                 .gameFinished(false)
                 .tieBreakerStarted(true)
                 .roundWinnerParticipantId(roundWinner.getId())
+                .roundWinnerAiAnswer(winnerSubmission.getAiAnswer())
+                .roundWinnerScore(winnerSubmission.getScore())
                 .nextRoundId(tieBreakerRound.getId())
                 .nextRoundNumber(tieBreakerRound.getRoundNumber())
                 .nextRoundTieBreaker(true)
