@@ -3,9 +3,11 @@ package backend.drawrace.domain.room.service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import backend.drawrace.domain.chat.dto.ChatMessageDto;
 import backend.drawrace.domain.room.dto.request.CreateRoomReq;
 import backend.drawrace.domain.room.dto.response.GetRoomListRes;
 import backend.drawrace.domain.room.dto.response.RankingRes;
@@ -30,6 +32,7 @@ public class RoomService {
     private final ParticipantRepository participantRepository;
     private final UserRepository userRepository;
     private final RankingService rankingService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Transactional
     public RoomInfoRes createRoom(CreateRoomReq req, Long userId) {
@@ -123,6 +126,14 @@ public class RoomService {
         participantRepository.save(participant);
         room.addParticipant(participant);
 
+        ChatMessageDto enterNotice = ChatMessageDto.builder()
+                .type(ChatMessageDto.MessageType.NOTICE)
+                .roomId(roomId)
+                .sender("System")
+                .message(user.getNickname() + "님이 입장하셨습니다.")
+                .build();
+        messagingTemplate.convertAndSend("/sub/rooms/" + roomId + "/chat", enterNotice);
+
         return RoomUpdateResponse.builder()
                 .roomId(roomId)
                 .type("USER_ENTER")
@@ -145,6 +156,7 @@ public class RoomService {
         Long roomId = room.getId();
         Long leaverId = userId;
         Long newHostId = null;
+        String nextHostNickname = "";
 
         // 방장이 나가는 경우 방장 위임 로직
         if (participant.isHost() && room.getCurPlayers() > 1) {
@@ -155,7 +167,29 @@ public class RoomService {
 
             nextHost.makeHost();
             room.changeHost(nextHost.getUserId().getId());
+
+            newHostId = nextHost.getUserId().getId();
+            nextHostNickname = nextHost.getUserId().getNickname();
         }
+
+        if (newHostId != null) {
+            ChatMessageDto hostNotice = ChatMessageDto.builder()
+                    .type(ChatMessageDto.MessageType.NOTICE)
+                    .roomId(roomId)
+                    .sender("System")
+                    .message("방장이 " + nextHostNickname + "님으로 변경되었습니다.")
+                    .build();
+            messagingTemplate.convertAndSend("/sub/rooms/" + roomId + "/chat", hostNotice);
+        }
+
+        ChatMessageDto leaveNotice = ChatMessageDto.builder()
+                .type(ChatMessageDto.MessageType.NOTICE)
+                .roomId(roomId)
+                .sender("System")
+                .message(user.getNickname() + "님이 퇴장하셨습니다.")
+                .build();
+        messagingTemplate.convertAndSend("/sub/rooms/" + roomId + "/chat", leaveNotice);
+
         // 참여자 제거 및 인원 감소
         room.removeParticipant(participant);
         participantRepository.delete(participant);
