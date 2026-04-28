@@ -228,12 +228,7 @@ public class RoundService {
         messagingTemplate.convertAndSend("/sub/rooms/" + roomId + "/chat", winnerNotice);
 
         return handleAfterRoundFinished(
-                round,
-                submittedAiResult,
-                winnerSubmission,
-                submittedCount,
-                totalParticipantCount,
-                roundWinner);
+                round, submittedAiResult, winnerSubmission, submittedCount, totalParticipantCount, roundWinner);
     }
 
     /**
@@ -302,12 +297,7 @@ public class RoundService {
 
         // 마지막 일반 라운드는 최종 우승 또는 결승 생성으로 처리
         return handleLastNormalRound(
-                round,
-                submittedAiResult,
-                winnerSubmission,
-                submittedCount,
-                totalParticipantCount,
-                roundWinner);
+                round, submittedAiResult, winnerSubmission, submittedCount, totalParticipantCount, roundWinner);
     }
 
     /**
