@@ -3,7 +3,7 @@ package backend.drawrace.domain.round.service;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -16,7 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
-@ConditionalOnExpression("'${ai.mode:}' == 'gateway' or '${ai.mode:}' == 'quickdraw'")
+@ConditionalOnProperty(name = "ai.mode", havingValue = "gateway")
 @RequiredArgsConstructor
 public class GatewayKeywordGenerator implements KeywordGenerator {
 
