@@ -114,6 +114,8 @@ class RoomServiceTest {
 
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(participantRepository.findByUserId(user)).willReturn(Optional.of(participant));
+        given(participant.getUserId()).willReturn(user);
+        given(room.getParticipants()).willReturn(List.of(participant));
 
         RoomUpdateResponse response = roomService.leaveRoom(userId);
 
