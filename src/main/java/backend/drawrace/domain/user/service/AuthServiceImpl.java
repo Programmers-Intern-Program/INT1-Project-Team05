@@ -41,6 +41,7 @@ public class AuthServiceImpl implements AuthService {
                 .email(dto.email())
                 .password(passwordEncoder.encode(dto.password()))
                 .nickname(dto.nickname())
+                .isAi(false)
                 .build();
 
         return userRepository.save(user).getId();
@@ -51,6 +52,10 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository
                 .findByEmail(dto.email())
                 .orElseThrow(() -> new ServiceException("401-1", "이메일 또는 비밀번호가 올바르지 않습니다."));
+
+        if (user.isAi()) {
+            throw new ServiceException("403-1", "AI 유저는 로그인할 수 없습니다.");
+        }
 
         if (!passwordEncoder.matches(dto.password(), user.getPassword())) {
             throw new ServiceException("401-1", "이메일 또는 비밀번호가 올바르지 않습니다.");

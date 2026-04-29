@@ -43,6 +43,8 @@ public class SecurityConfig {
                                 // 웹소켓 연결 시작 주소는 허용 (인증은 인터셉터에서 수행)
                                 .requestMatchers("/ws-draw/**")
                                 .permitAll()
+                                .requestMatchers("/api/ai/test", "/ai-test.html")
+                                .permitAll()
                                 .anyRequest()
                                 .authenticated())
                 .addFilterBefore(customAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);

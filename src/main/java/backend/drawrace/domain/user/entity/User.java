@@ -31,16 +31,20 @@ public class User extends BaseEntity {
 
     private String profileImageUrl;
 
+    @Column(nullable = false)
+    private boolean isAi = false;
+
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private UserStats stats;
 
     @Builder
-    public User(String email, String password, String nickname, String profileImageUrl) {
+    public User(String email, String password, String nickname, String profileImageUrl, boolean isAi) {
         this.email = email;
         this.password = password;
         this.nickname = nickname;
         this.profileImageUrl = profileImageUrl;
         this.stats = UserStats.builder().user(this).build();
+        this.isAi = isAi;
     }
 
     public void updateProfile(String nickname, String profileImageUrl) {

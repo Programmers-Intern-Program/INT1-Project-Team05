@@ -22,6 +22,7 @@ class UserRepositoryTest {
                 .email("jpa@test.com")
                 .password("1234")
                 .nickname("JPA테스터")
+                .isAi(false)
                 .build();
         userRepository.save(user);
 
@@ -39,6 +40,7 @@ class UserRepositoryTest {
                 .email("save@test.com")
                 .password("1234")
                 .nickname("저장테스트")
+                .isAi(false)
                 .build();
 
         User savedUser = userRepository.save(user);
