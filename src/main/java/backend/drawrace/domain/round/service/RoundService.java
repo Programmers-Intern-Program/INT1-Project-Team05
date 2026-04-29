@@ -1,7 +1,9 @@
 package backend.drawrace.domain.round.service;
 
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,7 +29,9 @@ import backend.drawrace.domain.round.validator.RoundValidator;
 import backend.drawrace.global.exception.ServiceException;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -42,6 +46,7 @@ public class RoundService {
     private final RoundValidator roundValidator;
     private final AiInferenceService aiInferenceService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final ObjectProvider<AiSubmissionService> aiSubmissionServiceProvider;
 
     /**
      * 게임 시작 처리
@@ -67,6 +72,7 @@ public class RoundService {
 
         List<Participant> participants = participantRepository.findByRoomId(roomId);
         saveRoundParticipants(savedRound, participants);
+        triggerAiIfPresent(savedRound, participants);
 
         RoundStartResponse response = RoundStartResponse.from(savedRound);
 
@@ -98,8 +104,10 @@ public class RoundService {
         // 방 소속 참가자인지 확인
         Participant participant = getValidParticipant(round, request.getParticipantId());
 
-        // 로그인한 사용자 본인의 참가 정보인지 확인
-        roundValidator.validateParticipantOwner(participant, userId);
+        // AI 참가자는 인증 검증 스킵
+        if (!participant.getUserId().isAi()) {
+            roundValidator.validateParticipantOwner(participant, userId);
+        }
 
         // 이번 라운드 제출 대상인지 확인
         boolean canPlay =
@@ -111,10 +119,15 @@ public class RoundService {
                 roundSubmissionRepository.existsByRoundIdAndParticipantId(round.getId(), participant.getId());
         roundValidator.validateNotSubmitted(alreadySubmitted);
 
-        // AI 판독 수행
-        // - 내부적으로 1회 재시도
-        // - 최종 실패 시 예외를 던져 제출을 실패 처리한다
-        AiInferenceResponse aiResult = aiInferenceService.infer(request.getImageData(), round.getKeyword());
+        // AI는 스트로크 데이터를 비전 모델로 판독할 수 없으므로 점수를 고정한다 (0.70~0.85)
+        // 인간이 잘 그리면 AI를 이길 수 있는 수준으로 설정
+        AiInferenceResponse aiResult;
+        if (participant.getUserId().isAi()) {
+            double score = 0.70 + ThreadLocalRandom.current().nextDouble(0.15);
+            aiResult = new AiInferenceResponse(round.getKeyword(), score);
+        } else {
+            aiResult = aiInferenceService.infer(request.getImageData(), round.getKeyword());
+        }
 
         // 제출 기록 저장
         RoundSubmission submission = RoundSubmission.create(
@@ -276,6 +289,7 @@ public class RoundService {
 
             List<Participant> participants = participantRepository.findByRoomId(room.getId());
             saveRoundParticipants(nextRound, participants);
+            triggerAiIfPresent(nextRound, participants);
 
             return SubmitDrawingResponse.builder()
                     .roundId(round.getId())
@@ -343,6 +357,7 @@ public class RoundService {
         // 동점이면 결승 라운드 생성
         Round tieBreakerRound = createTieBreakerRound(room, round.getRoundNumber() + 1);
         saveRoundParticipants(tieBreakerRound, topScorers);
+        triggerAiIfPresent(tieBreakerRound, topScorers);
 
         return SubmitDrawingResponse.builder()
                 .roundId(round.getId())
@@ -411,6 +426,21 @@ public class RoundService {
         return participants.stream()
                 .filter(participant -> participant.getRoundWinCount() == maxWinCount)
                 .toList();
+    }
+
+    /**
+     * 참가자 중 AI가 있으면 AiSubmissionService를 통해 자동 제출을 예약한다.
+     * quickdraw 모드가 아니면 AiSubmissionService 빈이 없으므로 아무것도 하지 않는다.
+     */
+    private void triggerAiIfPresent(Round round, List<Participant> participants) {
+        AiSubmissionService service = aiSubmissionServiceProvider.getIfAvailable();
+        if (service == null) return;
+
+        participants.stream()
+                .filter(p -> p.getUserId().isAi())
+                .findFirst()
+                .ifPresent(ai -> service.trigger(
+                        round.getId(), ai.getId(), ai.getUserId().getId(), round.getKeyword()));
     }
 
     private void sendFinalWinnerNotice(Long roomId, String nickname) {

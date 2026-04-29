@@ -97,4 +97,12 @@ public class RoomController {
         RoomInfoRes res = roomService.addAiParticipant(roomId, securityUser.getUserId());
         return new RsData<>("200-6", "AI 참가자를 추가했습니다.", res);
     }
+
+    @DeleteMapping("/{roomId}/ai-participants")
+    public RsData<RoomInfoRes> removeAiParticipant(
+            @PathVariable Long roomId, @AuthenticationPrincipal SecurityUser securityUser) {
+
+        RoomInfoRes res = roomService.removeAiParticipant(roomId, securityUser.getUserId());
+        return new RsData<>("200-7", "AI 참가자를 제거했습니다.", res);
+    }
 }

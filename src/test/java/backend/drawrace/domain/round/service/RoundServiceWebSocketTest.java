@@ -12,6 +12,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import backend.drawrace.domain.chat.dto.ChatMessageDto;
@@ -62,6 +63,9 @@ class RoundServiceWebSocketTest {
 
     @Mock
     private RankingService rankingService;
+
+    @Mock
+    private ObjectProvider<AiSubmissionService> aiSubmissionServiceProvider;
 
     @Test
     @DisplayName("라운드 종료 시 웹소켓으로 결과가 전송되는지 확인한다")
