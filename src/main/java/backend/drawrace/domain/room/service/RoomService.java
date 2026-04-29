@@ -164,6 +164,11 @@ public class RoomService {
         User aiUser =
                 userRepository.findByIsAi(true).orElseThrow(() -> new ServiceException("404-1", "AI 유저를 찾을 수 없습니다."));
 
+        boolean alreadyInRoom = participantRepository.existsByRoomIdAndUserId_Id(roomId, aiUser.getId());
+        if (alreadyInRoom) {
+            throw new ServiceException("400-5", "AI는 이미 방에 참여 중입니다.");
+        }
+
         Participant aiParticipant =
                 Participant.builder().userId(aiUser).room(room).isHost(false).build();
 
@@ -187,10 +192,10 @@ public class RoomService {
         Long newHostId = null;
         String nextHostNickname = "";
 
-        // 방장이 나가는 경우 방장 위임 로직
+        // 방장이 나가는 경우 방장 위임 로직 (AI는 방장이 될 수 없음)
         if (participant.isHost() && room.getCurPlayers() > 1) {
             Participant nextHost = room.getParticipants().stream()
-                    .filter(p -> !p.equals(participant))
+                    .filter(p -> !p.equals(participant) && !p.getUserId().isAi())
                     .findFirst()
                     .orElseThrow(() -> new ServiceException("500-2", "다음 방장을 찾을 수 없습니다."));
 
@@ -259,6 +264,8 @@ public class RoomService {
                 .orElse(0);
 
         for (Participant p : participants) {
+            if (p.getUserId().isAi()) continue; // AI는 통계 기록 제외
+
             // 모든 참가자 전체 판수 기록
             p.getUserId().getStats().recordGame();
 
