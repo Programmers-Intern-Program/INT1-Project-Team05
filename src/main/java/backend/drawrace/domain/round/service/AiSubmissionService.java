@@ -43,22 +43,30 @@ public class AiSubmissionService {
 
     /**
      * 비동기로 AI 제출을 실행한다.
-     * QuickDraw 데이터셋에서 키워드에 맞는 그림을 가져와 submitDrawing()을 호출한다.
+     * 딜레이 후 executeSubmission()을 호출한다.
      */
     @Async
     public void trigger(Long roundId, Long aiParticipantId, Long aiUserId, String keyword) {
         try {
             long delay = ThreadLocalRandom.current().nextLong(AI_DELAY_MIN_MS, AI_DELAY_MAX_MS + 1);
             Thread.sleep(delay);
+            executeSubmission(roundId, aiParticipantId, aiUserId, keyword);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("AI 제출 중단. roundId={}", roundId);
+        }
+    }
 
+    /**
+     * 실제 제출 로직. 딜레이와 분리되어 있어 테스트에서 직접 호출 가능하다.
+     */
+    void executeSubmission(Long roundId, Long aiParticipantId, Long aiUserId, String keyword) {
+        try {
             DrawingData drawing = aiDrawingService.generateDrawing(keyword);
             String imageData = objectMapper.writeValueAsString(drawing.strokes());
 
             // 기존 submitDrawing을 그대로 사용 (AI 여부는 내부에서 분기)
             roundService.submitDrawing(roundId, aiUserId, new SubmitDrawingRequest(aiParticipantId, imageData));
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.warn("AI 제출 중단. roundId={}", roundId);
         } catch (Exception e) {
             log.error("AI 제출 실패. roundId={}", roundId, e);
         }

@@ -68,6 +68,9 @@ class RoundServiceTest {
     @Mock
     private AiInferenceService aiInferenceService;
 
+    @Mock
+    private org.springframework.beans.factory.ObjectProvider<AiSubmissionService> aiSubmissionServiceProvider;
+
     @InjectMocks
     private RoundService roundService;
 
@@ -699,6 +702,74 @@ class RoundServiceTest {
         assertThatThrownBy(() -> roundService.getCurrentRound(roomId, userId))
                 .isInstanceOf(ServiceException.class)
                 .hasMessageContaining("해당 방 참가자만 현재 라운드를 조회할 수 있습니다");
+    }
+
+    @Test
+    @DisplayName("AI 참가자는 인증 검증을 거치지 않고 제출에 성공한다")
+    void submitDrawing_ai_skipsOwnerValidation() throws Exception {
+        Long roomId = 1L;
+        Long roundId = 10L;
+        Long aiParticipantId = 100L;
+        Long aiUserId = 999L;
+
+        Room room = createRoom(roomId, true, 1L);
+        Round round = createInProgressRound(roundId, room, 1, "사과");
+        Participant aiParticipant = createAiParticipant(aiParticipantId, room, aiUserId);
+
+        SubmitDrawingRequest request = createSubmitDrawingRequest(aiParticipantId, "stroke-json");
+
+        given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
+        given(participantRepository.findByIdAndRoomId(aiParticipantId, roomId)).willReturn(Optional.of(aiParticipant));
+        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, aiParticipantId)).willReturn(true);
+        given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, aiParticipantId)).willReturn(false);
+        given(roundSubmissionRepository.countByRoundId(roundId)).willReturn(1L);
+        given(roundParticipantRepository.countByRoundId(roundId)).willReturn(2L);
+
+        roundService.submitDrawing(roundId, aiUserId, request);
+
+        // AI는 validateParticipantOwner를 호출하지 않아야 한다
+        then(roundValidator).should(never()).validateParticipantOwner(any(), any());
+        then(roundSubmissionRepository).should().save(any(RoundSubmission.class));
+    }
+
+    @Test
+    @DisplayName("AI 참가자는 추론 서비스를 호출하지 않고 0.70~0.85 사이의 점수를 받는다")
+    void submitDrawing_ai_usesFixedScoreWithoutInference() throws Exception {
+        Long roomId = 1L;
+        Long roundId = 10L;
+        Long aiParticipantId = 100L;
+        Long aiUserId = 999L;
+
+        Room room = createRoom(roomId, true, 1L);
+        Round round = createInProgressRound(roundId, room, 1, "사과");
+        Participant aiParticipant = createAiParticipant(aiParticipantId, room, aiUserId);
+
+        SubmitDrawingRequest request = createSubmitDrawingRequest(aiParticipantId, "stroke-json");
+
+        given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
+        given(participantRepository.findByIdAndRoomId(aiParticipantId, roomId)).willReturn(Optional.of(aiParticipant));
+        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, aiParticipantId)).willReturn(true);
+        given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, aiParticipantId)).willReturn(false);
+        given(roundSubmissionRepository.countByRoundId(roundId)).willReturn(1L);
+        given(roundParticipantRepository.countByRoundId(roundId)).willReturn(2L);
+
+        roundService.submitDrawing(roundId, aiUserId, request);
+
+        // AI는 추론 서비스를 호출하지 않아야 한다
+        then(aiInferenceService).should(never()).infer(any(), any());
+
+        // 저장된 제출의 점수가 0.70~0.85 사이인지 확인
+        then(roundSubmissionRepository).should().save(argThat(submission ->
+                submission.getScore() >= 0.70 && submission.getScore() < 0.85));
+    }
+
+    private Participant createAiParticipant(Long participantId, Room room, Long aiUserId) throws Exception {
+        User user = mock(User.class);
+        given(user.isAi()).willReturn(true);
+
+        Participant participant = Participant.builder().userId(user).room(room).isHost(false).build();
+        setField(participant, "id", participantId);
+        return participant;
     }
 
     private Room createRoom(Long id, boolean isPlaying, Long hostId) throws Exception {
