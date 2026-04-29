@@ -59,16 +59,24 @@ public class AiSubmissionService {
 
     /**
      * 실제 제출 로직. 딜레이와 분리되어 있어 테스트에서 직접 호출 가능하다.
+     * 실패 시 빈 데이터로 폴백 제출하여 라운드가 중단되지 않도록 한다.
      */
     void executeSubmission(Long roundId, Long aiParticipantId, Long aiUserId, String keyword) {
         try {
             DrawingData drawing = aiDrawingService.generateDrawing(keyword);
             String imageData = objectMapper.writeValueAsString(drawing.strokes());
-
-            // 기존 submitDrawing을 그대로 사용 (AI 여부는 내부에서 분기)
             roundService.submitDrawing(roundId, aiUserId, new SubmitDrawingRequest(aiParticipantId, imageData));
         } catch (Exception e) {
-            log.error("AI 제출 실패. roundId={}", roundId, e);
+            log.warn("AI 제출 실패. 폴백 제출 시도. roundId={}", roundId, e);
+            submitFallback(roundId, aiParticipantId, aiUserId);
+        }
+    }
+
+    private void submitFallback(Long roundId, Long aiParticipantId, Long aiUserId) {
+        try {
+            roundService.submitDrawing(roundId, aiUserId, new SubmitDrawingRequest(aiParticipantId, "[]"));
+        } catch (Exception e) {
+            log.error("AI 폴백 제출도 실패. 라운드가 중단될 수 있음. roundId={}", roundId, e);
         }
     }
 }
