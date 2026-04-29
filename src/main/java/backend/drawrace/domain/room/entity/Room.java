@@ -47,6 +47,9 @@ public class Room extends BaseEntity {
     @Builder.Default
     private List<Participant> participants = new ArrayList<>();
 
+    @Version // 동시성 제어를 위한 버전 관리
+    private Long version;
+
     public void addParticipant(Participant participant) {
         this.participants.add(participant);
         this.curPlayers++;

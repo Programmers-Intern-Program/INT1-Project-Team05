@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 import backend.drawrace.domain.chat.dto.ChatMessageDto;
 import backend.drawrace.domain.room.dto.request.CreateRoomReq;
@@ -95,6 +96,33 @@ class RoomServiceTest {
         assertThatThrownBy(() -> roomService.joinRoom(roomId, 2L, "wrong_pw"))
                 .isInstanceOf(ServiceException.class)
                 .hasFieldOrPropertyWithValue("resultCode", "400-4");
+    }
+
+    @Test
+    @DisplayName("입장 시 동시성 충돌이 발생하면 최대 3번까지 재시도한다")
+    void shouldRetryWhenOptimisticLockConflictOccurs() throws Exception {
+        Long roomId = 1L;
+        Long userId = 1L;
+
+        Room room = createRoom(roomId, "테스트방", 2L);
+        User user = createUser(userId, "채은");
+
+        // 첫 번째, 두 번째 시도는 충돌 발생, 세 번째에 성공하도록 설정
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        // save할 때 낙관적 락 예외를 두 번 던지게 함
+        doThrow(ObjectOptimisticLockingFailureException.class) // 1회차 실패
+                .doThrow(ObjectOptimisticLockingFailureException.class) // 2회차 실패
+                .doAnswer(invocation -> invocation.getArgument(0)) // 3회차 성공
+                .when(participantRepository)
+                .save(any());
+
+        roomService.joinRoom(roomId, userId, null);
+
+        // findById가 총 3번(최초 + 재시도 2번) 호출되었는지 확인
+        verify(roomRepository, times(3)).findById(roomId);
+        verify(participantRepository, times(3)).save(any());
     }
 
     @Test

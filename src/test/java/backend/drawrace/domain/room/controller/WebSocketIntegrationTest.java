@@ -25,6 +25,12 @@ import org.springframework.web.socket.sockjs.client.SockJsClient;
 import org.springframework.web.socket.sockjs.client.WebSocketTransport;
 
 import backend.drawrace.domain.room.dto.response.DrawData;
+import backend.drawrace.domain.room.entity.Participant;
+import backend.drawrace.domain.room.entity.Room;
+import backend.drawrace.domain.room.repository.ParticipantRepository;
+import backend.drawrace.domain.room.repository.RoomRepository;
+import backend.drawrace.domain.user.entity.User;
+import backend.drawrace.domain.user.repository.UserRepository;
 import backend.drawrace.global.security.JwtTokenProvider;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -36,15 +42,46 @@ public class WebSocketIntegrationTest {
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
 
+    @Autowired
+    private RoomRepository roomRepository;
+
+    @Autowired
+    private ParticipantRepository participantRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
     private WebSocketStompClient stompClient;
     private String token;
+    private User testUser;
+    private Room testRoom;
 
     @BeforeEach
     void setUp() {
-        // 테스트용 JWT 토큰 생성 (1L 유저, test@test.com)
-        token = jwtTokenProvider.createAccessToken(1L, "test@test.com");
+        // 테스트용 유저 생성
+        testUser = userRepository.save(User.builder()
+                .email("test@test.com")
+                .nickname("테스트유저")
+                .password("1234")
+                .build());
 
-        // STOMP 클라이언트 설정
+        // 테스트용 방 생성
+        testRoom = roomRepository.save(Room.builder()
+                .title("테스트방")
+                .maxPlayers((short) 4)
+                .hostId(testUser.getId())
+                .build());
+
+        // 유저를 방 참여자로 등록 (StompHandler 보안 통과용)
+        participantRepository.save(Participant.builder()
+                .userId(testUser)
+                .room(testRoom)
+                .isHost(true)
+                .build());
+
+        // 저장된 유저 ID로 토큰 생성
+        token = jwtTokenProvider.createAccessToken(testUser.getId(), testUser.getEmail());
+
         stompClient = new WebSocketStompClient(
                 new SockJsClient(List.of(new WebSocketTransport(new StandardWebSocketClient()))));
         stompClient.setMessageConverter(new MappingJackson2MessageConverter());
@@ -65,8 +102,11 @@ public class WebSocketIntegrationTest {
                 .connectAsync(url, (WebSocketHttpHeaders) null, connectHeaders, new StompSessionHandlerAdapter() {})
                 .get(5, SECONDS);
 
+        String subPath = "/sub/rooms/" + testRoom.getId() + "/draw";
+        String pubPath = "/pub/rooms/" + testRoom.getId() + "/draw";
+
         // 특정 방 구독 (/sub/rooms/1/draw)
-        session.subscribe("/sub/rooms/1/draw", new StompFrameHandler() {
+        session.subscribe(subPath, new StompFrameHandler() {
             @Override
             public Type getPayloadType(StompHeaders headers) {
                 return DrawData.class;
@@ -86,7 +126,7 @@ public class WebSocketIntegrationTest {
                 .color("#FF0000")
                 .penSize(5)
                 .build();
-        session.send("/pub/rooms/1/draw", sendData);
+        session.send(pubPath, sendData);
 
         // 전송한 데이터가 구독 경로로 다시 잘 돌아오는지 확인 (5초 대기)
         DrawData receivedData = subscribeFuture.get(5, SECONDS);
