@@ -264,6 +264,10 @@ public class RoomService {
             throw new ServiceException("403-1", "방장만 AI를 제거할 수 있습니다.");
         }
 
+        if (room.isPlaying()) {
+            throw new ServiceException("400-2", "이미 게임이 시작된 방입니다.");
+        }
+
         User aiUser = userRepository.findByIsAi(true).orElseThrow(() -> new ServiceException("404-1", "AI 유저를 찾을 수 없습니다."));
 
         Participant aiParticipant = participantRepository.findByRoomIdAndUserId_Id(roomId, aiUser.getId())
