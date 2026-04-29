@@ -27,7 +27,10 @@ import backend.drawrace.domain.round.validator.RoundValidator;
 import backend.drawrace.global.exception.ServiceException;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -42,6 +45,7 @@ public class RoundService {
     private final RoundValidator roundValidator;
     private final AiInferenceService aiInferenceService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final ObjectProvider<AiSubmissionService> aiSubmissionServiceProvider;
 
     /**
      * 게임 시작 처리
@@ -67,6 +71,7 @@ public class RoundService {
 
         List<Participant> participants = participantRepository.findByRoomId(roomId);
         saveRoundParticipants(savedRound, participants);
+        triggerAiIfPresent(savedRound, participants);
 
         RoundStartResponse response = RoundStartResponse.from(savedRound);
 
@@ -276,6 +281,7 @@ public class RoundService {
 
             List<Participant> participants = participantRepository.findByRoomId(room.getId());
             saveRoundParticipants(nextRound, participants);
+            triggerAiIfPresent(nextRound, participants);
 
             return SubmitDrawingResponse.builder()
                     .roundId(round.getId())
@@ -343,6 +349,7 @@ public class RoundService {
         // 동점이면 결승 라운드 생성
         Round tieBreakerRound = createTieBreakerRound(room, round.getRoundNumber() + 1);
         saveRoundParticipants(tieBreakerRound, topScorers);
+        triggerAiIfPresent(tieBreakerRound, topScorers);
 
         return SubmitDrawingResponse.builder()
                 .roundId(round.getId())
@@ -411,6 +418,52 @@ public class RoundService {
         return participants.stream()
                 .filter(participant -> participant.getRoundWinCount() == maxWinCount)
                 .toList();
+    }
+
+    private void triggerAiIfPresent(Round round, List<Participant> participants) {
+        AiSubmissionService service = aiSubmissionServiceProvider.getIfAvailable();
+        if (service == null) return;
+
+        participants.stream()
+                .filter(p -> p.getUserId().isAi())
+                .findFirst()
+                .ifPresent(ai -> service.trigger(round.getId(), ai.getId(), round.getKeyword()));
+    }
+
+    @Transactional
+    public void submitAiDrawing(Long roundId, Long aiParticipantId, String imageData, String aiAnswer, double score) {
+        Round round = roundRepository.findById(roundId)
+                .orElseThrow(() -> new ServiceException("404-2", "존재하지 않는 라운드입니다."));
+
+        if (!round.isActive()) {
+            log.info("AI 제출 취소: 이미 종료된 라운드. roundId={}", roundId);
+            return;
+        }
+
+        if (roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, aiParticipantId)) {
+            log.info("AI 제출 취소: 이미 제출됨. roundId={}", roundId);
+            return;
+        }
+
+        Participant aiParticipant = participantRepository.findById(aiParticipantId)
+                .orElseThrow(() -> new ServiceException("404-4", "AI 참가자를 찾을 수 없습니다."));
+
+        RoundSubmission submission = RoundSubmission.create(round, aiParticipant, imageData, aiAnswer, score);
+        roundSubmissionRepository.save(submission);
+
+        long submittedCount = roundSubmissionRepository.countByRoundId(roundId);
+        long totalCount = roundParticipantRepository.countByRoundId(roundId);
+
+        if (submittedCount < totalCount) {
+            return;
+        }
+
+        AiInferenceResponse aiResult = new AiInferenceResponse(aiAnswer, score);
+        SubmitDrawingResponse response = handleRoundCompletion(round, aiResult, submittedCount, totalCount);
+
+        if (response.isRoundFinished()) {
+            messagingTemplate.convertAndSend("/sub/rooms/" + round.getRoom().getId(), response);
+        }
     }
 
     private void sendFinalWinnerNotice(Long roomId, String nickname) {
