@@ -14,11 +14,18 @@ import backend.drawrace.domain.round.dto.SubmitDrawingRequest;
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * AI 유저의 라운드 자동 제출을 담당한다.
+ * ai.mode=quickdraw 일 때만 활성화된다.
+ *
+ * RoundService와 순환 참조가 발생하므로 @Lazy로 지연 주입한다.
+ */
 @Slf4j
 @Service
 @ConditionalOnProperty(name = "ai.mode", havingValue = "quickdraw")
 public class AiSubmissionService {
 
+    // 실제 사람처럼 보이도록 랜덤 딜레이를 준다 (5~15초)
     private static final long AI_DELAY_MIN_MS = 5_000L;
     private static final long AI_DELAY_MAX_MS = 15_000L;
 
@@ -34,6 +41,10 @@ public class AiSubmissionService {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * 비동기로 AI 제출을 실행한다.
+     * QuickDraw 데이터셋에서 키워드에 맞는 그림을 가져와 submitDrawing()을 호출한다.
+     */
     @Async
     public void trigger(Long roundId, Long aiParticipantId, Long aiUserId, String keyword) {
         try {
@@ -43,6 +54,7 @@ public class AiSubmissionService {
             DrawingData drawing = aiDrawingService.generateDrawing(keyword);
             String imageData = objectMapper.writeValueAsString(drawing.strokes());
 
+            // 기존 submitDrawing을 그대로 사용 (AI 여부는 내부에서 분기)
             roundService.submitDrawing(roundId, aiUserId, new SubmitDrawingRequest(aiParticipantId, imageData));
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

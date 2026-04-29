@@ -12,7 +12,7 @@ import backend.drawrace.domain.round.service.MockAiInferenceService;
 import backend.drawrace.domain.round.service.MockKeywordGenerator;
 
 @Configuration
-@EnableAsync
+@EnableAsync  // AiSubmissionService의 @Async 비동기 처리를 위해 필요
 @EnableConfigurationProperties(AiProperties.class)
 public class AppConfig {
 

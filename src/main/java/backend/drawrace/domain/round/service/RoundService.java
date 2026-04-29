@@ -119,7 +119,8 @@ public class RoundService {
                 roundSubmissionRepository.existsByRoundIdAndParticipantId(round.getId(), participant.getId());
         roundValidator.validateNotSubmitted(alreadySubmitted);
 
-        // AI 참가자는 추론 스킵 후 점수 고정, 인간 참가자는 추론 수행
+        // AI는 스트로크 데이터를 비전 모델로 판독할 수 없으므로 점수를 고정한다 (0.70~0.85)
+        // 인간이 잘 그리면 AI를 이길 수 있는 수준으로 설정
         AiInferenceResponse aiResult;
         if (participant.getUserId().isAi()) {
             double score = 0.70 + ThreadLocalRandom.current().nextDouble(0.15);
@@ -427,6 +428,10 @@ public class RoundService {
                 .toList();
     }
 
+    /**
+     * 참가자 중 AI가 있으면 AiSubmissionService를 통해 자동 제출을 예약한다.
+     * quickdraw 모드가 아니면 AiSubmissionService 빈이 없으므로 아무것도 하지 않는다.
+     */
     private void triggerAiIfPresent(Round round, List<Participant> participants) {
         AiSubmissionService service = aiSubmissionServiceProvider.getIfAvailable();
         if (service == null) return;

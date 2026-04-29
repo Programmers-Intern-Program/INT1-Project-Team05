@@ -14,6 +14,7 @@ import backend.drawrace.global.config.AiProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+// ai.mode=gateway 전용. quickdraw 모드에서는 QuickDrawKeywordGenerator가 대신 활성화된다.
 @Slf4j
 @Service
 @ConditionalOnProperty(name = "ai.mode", havingValue = "gateway")
