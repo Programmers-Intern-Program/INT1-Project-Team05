@@ -33,9 +33,8 @@ public class AiSubmissionService {
     private final RoundService roundService;
     private final ObjectMapper objectMapper;
 
-    public AiSubmissionService(AiDrawingService aiDrawingService,
-                               @Lazy RoundService roundService,
-                               ObjectMapper objectMapper) {
+    public AiSubmissionService(
+            AiDrawingService aiDrawingService, @Lazy RoundService roundService, ObjectMapper objectMapper) {
         this.aiDrawingService = aiDrawingService;
         this.roundService = roundService;
         this.objectMapper = objectMapper;

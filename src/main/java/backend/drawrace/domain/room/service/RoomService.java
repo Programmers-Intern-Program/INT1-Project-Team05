@@ -86,7 +86,10 @@ public class RoomService {
 
         List<RoomInfoRes.ParticipantDto> participantDtos = room.getParticipants().stream()
                 .map(p -> new RoomInfoRes.ParticipantDto(
-                        p.getUserId().getId(), p.getUserId().getNickname(), p.isHost(), p.getUserId().isAi()))
+                        p.getUserId().getId(),
+                        p.getUserId().getNickname(),
+                        p.isHost(),
+                        p.getUserId().isAi()))
                 .toList();
 
         return new RoomInfoRes(
@@ -238,7 +241,8 @@ public class RoomService {
         participantRepository.delete(participant);
 
         // 방에 아무도 없거나 AI만 남으면 방 삭제
-        boolean onlyAiOrEmpty = room.getParticipants().stream().allMatch(p -> p.getUserId().isAi());
+        boolean onlyAiOrEmpty =
+                room.getParticipants().stream().allMatch(p -> p.getUserId().isAi());
         if (room.getCurPlayers() == 0 || onlyAiOrEmpty) {
             roomRepository.delete(room);
             return null;
@@ -268,9 +272,11 @@ public class RoomService {
             throw new ServiceException("400-2", "이미 게임이 시작된 방입니다.");
         }
 
-        User aiUser = userRepository.findByIsAi(true).orElseThrow(() -> new ServiceException("404-1", "AI 유저를 찾을 수 없습니다."));
+        User aiUser =
+                userRepository.findByIsAi(true).orElseThrow(() -> new ServiceException("404-1", "AI 유저를 찾을 수 없습니다."));
 
-        Participant aiParticipant = participantRepository.findByRoomIdAndUserId_Id(roomId, aiUser.getId())
+        Participant aiParticipant = participantRepository
+                .findByRoomIdAndUserId_Id(roomId, aiUser.getId())
                 .orElseThrow(() -> new ServiceException("404-3", "AI가 방에 참여 중이지 않습니다."));
 
         room.removeParticipant(aiParticipant);

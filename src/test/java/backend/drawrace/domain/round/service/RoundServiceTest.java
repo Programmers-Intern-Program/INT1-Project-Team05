@@ -720,8 +720,10 @@ class RoundServiceTest {
 
         given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
         given(participantRepository.findByIdAndRoomId(aiParticipantId, roomId)).willReturn(Optional.of(aiParticipant));
-        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, aiParticipantId)).willReturn(true);
-        given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, aiParticipantId)).willReturn(false);
+        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, aiParticipantId))
+                .willReturn(true);
+        given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, aiParticipantId))
+                .willReturn(false);
         given(roundSubmissionRepository.countByRoundId(roundId)).willReturn(1L);
         given(roundParticipantRepository.countByRoundId(roundId)).willReturn(2L);
 
@@ -748,8 +750,10 @@ class RoundServiceTest {
 
         given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
         given(participantRepository.findByIdAndRoomId(aiParticipantId, roomId)).willReturn(Optional.of(aiParticipant));
-        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, aiParticipantId)).willReturn(true);
-        given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, aiParticipantId)).willReturn(false);
+        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, aiParticipantId))
+                .willReturn(true);
+        given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, aiParticipantId))
+                .willReturn(false);
         given(roundSubmissionRepository.countByRoundId(roundId)).willReturn(1L);
         given(roundParticipantRepository.countByRoundId(roundId)).willReturn(2L);
 
@@ -759,15 +763,17 @@ class RoundServiceTest {
         then(aiInferenceService).should(never()).infer(any(), any());
 
         // 저장된 제출의 점수가 0.70~0.85 사이인지 확인
-        then(roundSubmissionRepository).should().save(argThat(submission ->
-                submission.getScore() >= 0.70 && submission.getScore() < 0.85));
+        then(roundSubmissionRepository)
+                .should()
+                .save(argThat(submission -> submission.getScore() >= 0.70 && submission.getScore() < 0.85));
     }
 
     private Participant createAiParticipant(Long participantId, Room room, Long aiUserId) throws Exception {
         User user = mock(User.class);
         given(user.isAi()).willReturn(true);
 
-        Participant participant = Participant.builder().userId(user).room(room).isHost(false).build();
+        Participant participant =
+                Participant.builder().userId(user).room(room).isHost(false).build();
         setField(participant, "id", participantId);
         return participant;
     }

@@ -3,6 +3,7 @@ package backend.drawrace.domain.round.service;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +29,6 @@ import backend.drawrace.domain.round.validator.RoundValidator;
 import backend.drawrace.global.exception.ServiceException;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.ObjectProvider;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -439,7 +439,8 @@ public class RoundService {
         participants.stream()
                 .filter(p -> p.getUserId().isAi())
                 .findFirst()
-                .ifPresent(ai -> service.trigger(round.getId(), ai.getId(), ai.getUserId().getId(), round.getKeyword()));
+                .ifPresent(ai -> service.trigger(
+                        round.getId(), ai.getId(), ai.getUserId().getId(), round.getKeyword()));
     }
 
     private void sendFinalWinnerNotice(Long roomId, String nickname) {

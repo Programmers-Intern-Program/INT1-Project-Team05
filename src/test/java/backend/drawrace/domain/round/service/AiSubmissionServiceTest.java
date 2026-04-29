@@ -47,9 +47,13 @@ class AiSubmissionServiceTest {
         aiSubmissionService.executeSubmission(roundId, aiParticipantId, aiUserId, keyword);
 
         then(aiDrawingService).should().generateDrawing(keyword);
-        then(roundService).should().submitDrawing(eq(roundId), eq(aiUserId), argThat(req ->
-                req.getParticipantId().equals(aiParticipantId)
-                        && req.getImageData().equals("[[[0,1],[2,3]]]")));
+        then(roundService)
+                .should()
+                .submitDrawing(
+                        eq(roundId),
+                        eq(aiUserId),
+                        argThat(req -> req.getParticipantId().equals(aiParticipantId)
+                                && req.getImageData().equals("[[[0,1],[2,3]]]")));
     }
 
     @Test
@@ -65,8 +69,13 @@ class AiSubmissionServiceTest {
         aiSubmissionService.executeSubmission(roundId, aiParticipantId, aiUserId, keyword);
 
         // 폴백으로 빈 데이터 제출 시도
-        then(roundService).should().submitDrawing(eq(roundId), eq(aiUserId),
-                argThat(req -> req.getParticipantId().equals(aiParticipantId) && req.getImageData().equals("[]")));
+        then(roundService)
+                .should()
+                .submitDrawing(
+                        eq(roundId),
+                        eq(aiUserId),
+                        argThat(req -> req.getParticipantId().equals(aiParticipantId)
+                                && req.getImageData().equals("[]")));
     }
 
     @Test
@@ -78,7 +87,8 @@ class AiSubmissionServiceTest {
         String keyword = "사과";
 
         given(aiDrawingService.generateDrawing(keyword)).willThrow(new RuntimeException("그림 생성 실패"));
-        willThrow(new RuntimeException("폴백 실패")).given(roundService)
+        willThrow(new RuntimeException("폴백 실패"))
+                .given(roundService)
                 .submitDrawing(any(), any(), any(SubmitDrawingRequest.class));
 
         // 예외가 외부로 전파되지 않아야 한다
