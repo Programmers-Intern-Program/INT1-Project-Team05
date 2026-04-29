@@ -1,6 +1,7 @@
 package backend.drawrace.domain.room.service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -194,11 +195,19 @@ public class RoomService {
 
         // 방장이 나가는 경우 방장 위임 로직 (AI는 방장이 될 수 없음)
         if (participant.isHost() && room.getCurPlayers() > 1) {
-            Participant nextHost = room.getParticipants().stream()
+            Optional<Participant> nextHostOpt = room.getParticipants().stream()
                     .filter(p -> !p.equals(participant) && !p.getUserId().isAi())
-                    .findFirst()
-                    .orElseThrow(() -> new ServiceException("500-2", "다음 방장을 찾을 수 없습니다."));
+                    .findFirst();
 
+            if (nextHostOpt.isEmpty()) {
+                // 남은 참여자가 AI뿐 → 방 삭제
+                room.removeParticipant(participant);
+                participantRepository.delete(participant);
+                roomRepository.delete(room);
+                return null;
+            }
+
+            Participant nextHost = nextHostOpt.get();
             nextHost.makeHost();
             room.changeHost(nextHost.getUserId().getId());
 
@@ -228,8 +237,9 @@ public class RoomService {
         room.removeParticipant(participant);
         participantRepository.delete(participant);
 
-        // 방에 아무도 없으면 방 삭제
-        if (room.getCurPlayers() == 0) {
+        // 방에 아무도 없거나 AI만 남으면 방 삭제
+        boolean onlyAiOrEmpty = room.getParticipants().stream().allMatch(p -> p.getUserId().isAi());
+        if (room.getCurPlayers() == 0 || onlyAiOrEmpty) {
             roomRepository.delete(room);
             return null;
         }
@@ -244,6 +254,25 @@ public class RoomService {
                         .toList())
                 .message(user.getNickname() + "님이 퇴장하셨습니다.")
                 .build();
+    }
+
+    @Transactional
+    public RoomInfoRes removeAiParticipant(Long roomId, Long hostId) {
+        Room room = roomRepository.findById(roomId).orElseThrow(() -> new ServiceException("404-2", "방을 찾을 수 없습니다."));
+
+        if (!room.getHostId().equals(hostId)) {
+            throw new ServiceException("403-1", "방장만 AI를 제거할 수 있습니다.");
+        }
+
+        User aiUser = userRepository.findByIsAi(true).orElseThrow(() -> new ServiceException("404-1", "AI 유저를 찾을 수 없습니다."));
+
+        Participant aiParticipant = participantRepository.findByRoomIdAndUserId_Id(roomId, aiUser.getId())
+                .orElseThrow(() -> new ServiceException("404-3", "AI가 방에 참여 중이지 않습니다."));
+
+        room.removeParticipant(aiParticipant);
+        participantRepository.delete(aiParticipant);
+
+        return getRoomDetail(roomId);
     }
 
     @Transactional
