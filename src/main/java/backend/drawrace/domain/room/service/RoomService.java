@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -101,47 +102,72 @@ public class RoomService {
 
     @Transactional
     public RoomUpdateResponse joinRoom(Long roomId, Long userId, String inputPassword) {
-        Room room = roomRepository.findById(roomId).orElseThrow(() -> new ServiceException("404-2", "방을 찾을 수 없습니다."));
+        int maxRetries = 3; // 최대 3번 시도
+        int retryCount = 0;
 
-        // 비밀번호 체크 (방에 비밀번호가 걸려있는 경우만)
-        if (room.getPassword() != null && !room.getPassword().isEmpty()) {
-            if (!room.getPassword().equals(inputPassword)) {
-                throw new ServiceException("400-4", "비밀번호가 일치하지 않습니다.");
+        while (retryCount < maxRetries) {
+            try {
+                Room room = roomRepository
+                        .findById(roomId)
+                        .orElseThrow(() -> new ServiceException("404-2", "방을 찾을 수 없습니다."));
+
+                // 비밀번호 체크 (방에 비밀번호가 걸려있는 경우만)
+                if (room.getPassword() != null && !room.getPassword().isEmpty()) {
+                    if (!room.getPassword().equals(inputPassword)) {
+                        throw new ServiceException("400-4", "비밀번호가 일치하지 않습니다.");
+                    }
+                }
+
+                if (room.isPlaying()) {
+                    throw new ServiceException("400-2", "이미 게임이 시작된 방입니다.");
+                }
+
+                if (room.getCurPlayers() >= room.getMaxPlayers()) {
+                    throw new ServiceException("400-3", "방 인원이 초과되었습니다.");
+                }
+
+                User user = userRepository
+                        .findById(userId)
+                        .orElseThrow(() -> new ServiceException("404-1", "유저를 찾을 수 없습니다."));
+
+                Participant participant = Participant.builder()
+                        .userId(user)
+                        .room(room)
+                        .isHost(false)
+                        .build();
+
+                participantRepository.save(participant);
+                room.addParticipant(participant);
+
+                ChatMessageDto enterNotice = ChatMessageDto.builder()
+                        .type(ChatMessageDto.MessageType.NOTICE)
+                        .roomId(roomId)
+                        .sender("System")
+                        .message(user.getNickname() + "님이 입장하셨습니다.")
+                        .build();
+                messagingTemplate.convertAndSend("/sub/rooms/" + roomId + "/chat", enterNotice);
+
+                return RoomUpdateResponse.builder()
+                        .roomId(roomId)
+                        .type("USER_ENTER")
+                        .participants(room.getParticipants().stream()
+                                .map(p -> p.getUserId().getNickname())
+                                .toList())
+                        .message(user.getNickname() + "님이 입장하셨습니다.")
+                        .build();
+            } catch (ObjectOptimisticLockingFailureException e) {
+                retryCount++;
+                if (retryCount >= maxRetries) {
+                    throw new ServiceException("409-1", "접속자가 너무 많아 입장에 실패했습니다. 다시 시도해 주세요.");
+                }
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
             }
         }
-
-        if (room.isPlaying()) {
-            throw new ServiceException("400-2", "이미 게임이 시작된 방입니다.");
-        }
-
-        if (room.getCurPlayers() >= room.getMaxPlayers()) {
-            throw new ServiceException("400-3", "방 인원이 초과되었습니다.");
-        }
-
-        User user = userRepository.findById(userId).orElseThrow(() -> new ServiceException("404-1", "유저를 찾을 수 없습니다."));
-
-        Participant participant =
-                Participant.builder().userId(user).room(room).isHost(false).build();
-
-        participantRepository.save(participant);
-        room.addParticipant(participant);
-
-        ChatMessageDto enterNotice = ChatMessageDto.builder()
-                .type(ChatMessageDto.MessageType.NOTICE)
-                .roomId(roomId)
-                .sender("System")
-                .message(user.getNickname() + "님이 입장하셨습니다.")
-                .build();
-        messagingTemplate.convertAndSend("/sub/rooms/" + roomId + "/chat", enterNotice);
-
-        return RoomUpdateResponse.builder()
-                .roomId(roomId)
-                .type("USER_ENTER")
-                .participants(room.getParticipants().stream()
-                        .map(p -> p.getUserId().getNickname())
-                        .toList())
-                .message(user.getNickname() + "님이 입장하셨습니다.")
-                .build();
+        throw new ServiceException("500-0", "알 수 없는 오류가 발생했습니다.");
     }
 
     @Transactional
