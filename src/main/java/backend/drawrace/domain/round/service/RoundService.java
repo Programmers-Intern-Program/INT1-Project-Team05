@@ -1,6 +1,7 @@
 package backend.drawrace.domain.round.service;
 
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -103,8 +104,10 @@ public class RoundService {
         // 방 소속 참가자인지 확인
         Participant participant = getValidParticipant(round, request.getParticipantId());
 
-        // 로그인한 사용자 본인의 참가 정보인지 확인
-        roundValidator.validateParticipantOwner(participant, userId);
+        // AI 참가자는 인증 검증 스킵
+        if (!participant.getUserId().isAi()) {
+            roundValidator.validateParticipantOwner(participant, userId);
+        }
 
         // 이번 라운드 제출 대상인지 확인
         boolean canPlay =
@@ -116,10 +119,14 @@ public class RoundService {
                 roundSubmissionRepository.existsByRoundIdAndParticipantId(round.getId(), participant.getId());
         roundValidator.validateNotSubmitted(alreadySubmitted);
 
-        // AI 판독 수행
-        // - 내부적으로 1회 재시도
-        // - 최종 실패 시 예외를 던져 제출을 실패 처리한다
-        AiInferenceResponse aiResult = aiInferenceService.infer(request.getImageData(), round.getKeyword());
+        // AI 참가자는 추론 스킵 후 점수 고정, 인간 참가자는 추론 수행
+        AiInferenceResponse aiResult;
+        if (participant.getUserId().isAi()) {
+            double score = 0.70 + ThreadLocalRandom.current().nextDouble(0.15);
+            aiResult = new AiInferenceResponse(round.getKeyword(), score);
+        } else {
+            aiResult = aiInferenceService.infer(request.getImageData(), round.getKeyword());
+        }
 
         // 제출 기록 저장
         RoundSubmission submission = RoundSubmission.create(
@@ -427,43 +434,7 @@ public class RoundService {
         participants.stream()
                 .filter(p -> p.getUserId().isAi())
                 .findFirst()
-                .ifPresent(ai -> service.trigger(round.getId(), ai.getId(), round.getKeyword()));
-    }
-
-    @Transactional
-    public void submitAiDrawing(Long roundId, Long aiParticipantId, String imageData, String aiAnswer, double score) {
-        Round round = roundRepository.findById(roundId)
-                .orElseThrow(() -> new ServiceException("404-2", "존재하지 않는 라운드입니다."));
-
-        if (!round.isActive()) {
-            log.info("AI 제출 취소: 이미 종료된 라운드. roundId={}", roundId);
-            return;
-        }
-
-        if (roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, aiParticipantId)) {
-            log.info("AI 제출 취소: 이미 제출됨. roundId={}", roundId);
-            return;
-        }
-
-        Participant aiParticipant = participantRepository.findById(aiParticipantId)
-                .orElseThrow(() -> new ServiceException("404-4", "AI 참가자를 찾을 수 없습니다."));
-
-        RoundSubmission submission = RoundSubmission.create(round, aiParticipant, imageData, aiAnswer, score);
-        roundSubmissionRepository.save(submission);
-
-        long submittedCount = roundSubmissionRepository.countByRoundId(roundId);
-        long totalCount = roundParticipantRepository.countByRoundId(roundId);
-
-        if (submittedCount < totalCount) {
-            return;
-        }
-
-        AiInferenceResponse aiResult = new AiInferenceResponse(aiAnswer, score);
-        SubmitDrawingResponse response = handleRoundCompletion(round, aiResult, submittedCount, totalCount);
-
-        if (response.isRoundFinished()) {
-            messagingTemplate.convertAndSend("/sub/rooms/" + round.getRoom().getId(), response);
-        }
+                .ifPresent(ai -> service.trigger(round.getId(), ai.getId(), ai.getUserId().getId(), round.getKeyword()));
     }
 
     private void sendFinalWinnerNotice(Long roomId, String nickname) {
