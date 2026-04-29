@@ -85,7 +85,7 @@ public class RoomService {
 
         List<RoomInfoRes.ParticipantDto> participantDtos = room.getParticipants().stream()
                 .map(p -> new RoomInfoRes.ParticipantDto(
-                        p.getUserId().getId(), p.getUserId().getNickname(), p.isHost()))
+                        p.getUserId().getId(), p.getUserId().getNickname(), p.isHost(), p.getUserId().isAi()))
                 .toList();
 
         return new RoomInfoRes(

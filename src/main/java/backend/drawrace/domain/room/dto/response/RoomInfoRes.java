@@ -11,5 +11,5 @@ public record RoomInfoRes(
         Long hostId,
         boolean isPlaying,
         List<ParticipantDto> participants) {
-    public record ParticipantDto(Long userId, String nickname, boolean isHost) {}
+    public record ParticipantDto(Long userId, String nickname, boolean isHost, boolean isAi) {}
 }
