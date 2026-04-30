@@ -20,6 +20,7 @@ import backend.drawrace.domain.user.dto.CreateUserRequest;
 import backend.drawrace.domain.user.dto.LoginRequest;
 import backend.drawrace.domain.user.dto.LoginResponse;
 import backend.drawrace.domain.user.dto.TokenRequest;
+import backend.drawrace.domain.user.dto.UpdatePasswordRequest;
 import backend.drawrace.domain.user.entity.RefreshToken;
 import backend.drawrace.domain.user.repository.RefreshTokenRepository;
 import backend.drawrace.global.exception.ServiceException;
@@ -193,5 +194,67 @@ class AuthServiceTest {
         authService.logout(userId);
 
         assertThat(refreshTokenRepository.findById(userId)).isEmpty();
+    }
+
+    // ===== 비밀번호 변경 =====
+
+    @Test
+    @DisplayName("비밀번호_변경_성공")
+    void updatePassword_success() {
+        Long userId = createTestUser();
+
+        authService.updatePassword(
+                userId,
+                UpdatePasswordRequest.builder()
+                        .currentPassword("password123")
+                        .newPassword("newpassword456")
+                        .build());
+
+        // 변경된 비밀번호로 로그인 성공
+        LoginResponse response = authService.login(new LoginRequest("test@example.com", "newpassword456"));
+        assertThat(response.accessToken()).isNotBlank();
+    }
+
+    @Test
+    @DisplayName("비밀번호_변경_실패_존재하지_않는_유저")
+    void updatePassword_fail_user_not_found() {
+        assertThatThrownBy(() -> authService.updatePassword(
+                        999L,
+                        UpdatePasswordRequest.builder()
+                                .currentPassword("password123")
+                                .newPassword("newpassword456")
+                                .build()))
+                .isInstanceOf(ServiceException.class)
+                .hasFieldOrPropertyWithValue("resultCode", "404-1");
+    }
+
+    @Test
+    @DisplayName("비밀번호_변경_실패_현재_비밀번호_불일치")
+    void updatePassword_fail_wrong_current_password() {
+        Long userId = createTestUser();
+
+        assertThatThrownBy(() -> authService.updatePassword(
+                        userId,
+                        UpdatePasswordRequest.builder()
+                                .currentPassword("wrongpassword")
+                                .newPassword("newpassword456")
+                                .build()))
+                .isInstanceOf(ServiceException.class)
+                .hasFieldOrPropertyWithValue("resultCode", "401-5");
+    }
+
+    @Test
+    @DisplayName("비밀번호_변경_실패_새_비밀번호가_현재와_동일")
+    void updatePassword_fail_same_password() {
+        Long userId = createTestUser();
+
+        assertThatThrownBy(() -> authService.updatePassword(
+                        userId,
+                        UpdatePasswordRequest.builder()
+                                .currentPassword("password123")
+                                .newPassword("password123")
+                                .build()))
+                .isInstanceOf(ServiceException.class)
+                .hasFieldOrPropertyWithValue("resultCode", "400-1");
     }
 }

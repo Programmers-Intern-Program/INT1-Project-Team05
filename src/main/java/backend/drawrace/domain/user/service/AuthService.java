@@ -4,6 +4,7 @@ import backend.drawrace.domain.user.dto.CreateUserRequest;
 import backend.drawrace.domain.user.dto.LoginRequest;
 import backend.drawrace.domain.user.dto.LoginResponse;
 import backend.drawrace.domain.user.dto.TokenRequest;
+import backend.drawrace.domain.user.dto.UpdatePasswordRequest;
 
 public interface AuthService {
 
@@ -33,4 +34,11 @@ public interface AuthService {
      * @param userId 로그아웃할 유저 ID
      */
     void logout(Long userId);
+
+    /**
+     * 비밀번호 변경
+     * @param userId 변경할 유저 ID
+     * @param request 현재 비밀번호 및 새 비밀번호
+     */
+    void updatePassword(Long userId, UpdatePasswordRequest request);
 }

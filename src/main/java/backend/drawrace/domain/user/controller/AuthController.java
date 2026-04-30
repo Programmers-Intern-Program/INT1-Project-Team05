@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,6 +14,7 @@ import backend.drawrace.domain.user.dto.CreateUserRequest;
 import backend.drawrace.domain.user.dto.LoginRequest;
 import backend.drawrace.domain.user.dto.LoginResponse;
 import backend.drawrace.domain.user.dto.TokenRequest;
+import backend.drawrace.domain.user.dto.UpdatePasswordRequest;
 import backend.drawrace.domain.user.service.AuthService;
 import backend.drawrace.global.rsdata.RsData;
 import backend.drawrace.global.security.SecurityUser;
@@ -48,5 +50,12 @@ public class AuthController {
     public RsData<Void> logout(@AuthenticationPrincipal SecurityUser user) {
         authService.logout(user.getUserId());
         return new RsData<>("200-3", "로그아웃되었습니다.");
+    }
+
+    @PatchMapping("/password")
+    public RsData<Void> updatePassword(
+            @AuthenticationPrincipal SecurityUser user, @RequestBody @Valid UpdatePasswordRequest request) {
+        authService.updatePassword(user.getUserId(), request);
+        return new RsData<>("200-4", "비밀번호가 변경되었습니다.");
     }
 }
