@@ -61,6 +61,10 @@ public class AuthServiceImpl implements AuthService {
             throw new ServiceException("403-1", "AI 유저는 로그인할 수 없습니다.");
         }
 
+        if (user.isGuest()) {
+            throw new ServiceException("403-2", "게스트 계정은 일반 로그인을 사용할 수 없습니다.");
+        }
+
         if (!passwordEncoder.matches(dto.password(), user.getPassword())) {
             throw new ServiceException("401-1", "이메일 또는 비밀번호가 올바르지 않습니다.");
         }
