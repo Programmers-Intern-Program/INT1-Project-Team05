@@ -30,6 +30,19 @@ public class AiChatService {
     private final SimpMessagingTemplate messagingTemplate;
 
     @Async
+    public void triggerOnAiJoin(Long roomId, String aiNickname) {
+        try {
+            sleep();
+            String message = generateChatMessage(buildJoinPrompt());
+            broadcast(roomId, aiNickname, message);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (Exception e) {
+            log.warn("AI 채팅 생성 실패 (입장). roomId={}", roomId, e);
+        }
+    }
+
+    @Async
     public void triggerOnRoundStart(Long roomId, String keyword, String aiNickname) {
         try {
             sleep();
@@ -81,6 +94,14 @@ public class AiChatService {
                 .getBody();
 
         return response.getChoices().get(0).getMessage().getContent().trim();
+    }
+
+    private String buildJoinPrompt() {
+        return """
+                너는 그림 맞추기 게임에 참가한 AI 플레이어야.
+                방에 막 입장했어. 자연스럽고 짧은 한국어 인삿말을 한 문장으로 만들어줘.
+                이모지 포함 가능. 말투는 친근하게. 반드시 한 문장만 출력해.
+                """;
     }
 
     private String buildRoundStartPrompt(String keyword) {
