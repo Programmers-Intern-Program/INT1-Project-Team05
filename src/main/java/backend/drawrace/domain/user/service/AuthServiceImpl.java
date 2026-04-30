@@ -62,7 +62,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         if (user.isGuest()) {
-            throw new ServiceException("403-2", "게스트 계정은 일반 로그인을 사용할 수 없습니다.");
+            throw new ServiceException("403-5", "게스트 계정은 일반 로그인을 사용할 수 없습니다.");
         }
 
         if (!passwordEncoder.matches(dto.password(), user.getPassword())) {
@@ -146,7 +146,7 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findById(userId).orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 유저입니다."));
 
         if (user.isGuest()) {
-            throw new ServiceException("403-2", "게스트는 비밀번호를 변경할 수 없습니다.");
+            throw new ServiceException("403-6", "게스트는 비밀번호를 변경할 수 없습니다.");
         }
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {

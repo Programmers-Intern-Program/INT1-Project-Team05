@@ -163,6 +163,6 @@ class UserServiceTest {
 
         assertThatThrownBy(() -> userService.updateProfile(guestId, new UpdateUserRequest("새닉네임", null)))
                 .isInstanceOf(ServiceException.class)
-                .hasFieldOrPropertyWithValue("resultCode", "403-1");
+                .hasFieldOrPropertyWithValue("resultCode", "403-4");
     }
 }

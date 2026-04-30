@@ -53,7 +53,7 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 유저입니다. ID: " + userId));
 
         if (user.isGuest()) {
-            throw new ServiceException("403-1", "게스트는 프로필을 수정할 수 없습니다.");
+            throw new ServiceException("403-4", "게스트는 프로필을 수정할 수 없습니다.");
         }
 
         if (request.nickname() != null && userRepository.existsByNicknameAndIdNot(request.nickname(), userId)) {
