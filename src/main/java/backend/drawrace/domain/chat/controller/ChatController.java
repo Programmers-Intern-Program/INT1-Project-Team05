@@ -21,7 +21,7 @@ public class ChatController {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final UserRepository userRepository;
-    private final ChatModerationService chatModerationService; // [추가]
+    private final ChatModerationService chatModerationService;
 
     @MessageMapping("/rooms/{roomId}/chat")
     public void sendChatMessage(

@@ -11,8 +11,11 @@ import backend.drawrace.domain.round.service.RoundService;
 import backend.drawrace.global.rsdata.RsData;
 import backend.drawrace.global.security.SecurityUser;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
+@Tag(name = "Round & Game API", description = "게임 시작 및 그림 제출")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/rounds")
@@ -20,6 +23,7 @@ public class RoundController {
 
     private final RoundService roundService;
 
+    @Operation(summary = "그림 제출", description = "그린 그림을 제출하고 AI 판별 점수(0.0~1.0)를 받습니다.")
     @PostMapping("/{roundId}/submit")
     public RsData<SubmitDrawingResponse> submitDrawing(
             @PathVariable Long roundId,
