@@ -212,7 +212,7 @@ class AuthServiceTest {
 
         // 변경된 비밀번호로 로그인 성공
         LoginResponse response = authService.login(new LoginRequest("test@example.com", "newpassword456"));
-        assertThat(response.getAccessToken()).isNotBlank();
+        assertThat(response.accessToken()).isNotBlank();
     }
 
     @Test
