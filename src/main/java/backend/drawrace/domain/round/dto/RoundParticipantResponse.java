@@ -13,13 +13,19 @@ public class RoundParticipantResponse {
     private int roundWinCount;
     private boolean isHost;
     private boolean isWinner;
+    private boolean submitted;
 
     public static RoundParticipantResponse from(Participant participant) {
+        return from(participant, false);
+    }
+
+    public static RoundParticipantResponse from(Participant participant, boolean submitted) {
         return RoundParticipantResponse.builder()
                 .participantId(participant.getId())
                 .roundWinCount(participant.getRoundWinCount())
                 .isHost(participant.isHost())
                 .isWinner(participant.isWinner())
+                .submitted(submitted)
                 .build();
     }
 }
