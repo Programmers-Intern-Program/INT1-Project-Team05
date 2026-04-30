@@ -34,17 +34,21 @@ public class User extends BaseEntity {
     @Column(nullable = false)
     private boolean isAi = false;
 
+    @Column(nullable = false)
+    private boolean isGuest = false;
+
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private UserStats stats;
 
     @Builder
-    public User(String email, String password, String nickname, String profileImageUrl, boolean isAi) {
+    public User(String email, String password, String nickname, String profileImageUrl, boolean isAi, boolean isGuest) {
         this.email = email;
         this.password = password;
         this.nickname = nickname;
         this.profileImageUrl = profileImageUrl;
         this.stats = UserStats.builder().user(this).build();
         this.isAi = isAi;
+        this.isGuest = isGuest;
     }
 
     public void updateProfile(String nickname, String profileImageUrl) {

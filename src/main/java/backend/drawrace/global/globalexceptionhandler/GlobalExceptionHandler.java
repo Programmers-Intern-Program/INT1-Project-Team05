@@ -3,11 +3,15 @@ package backend.drawrace.global.globalexceptionhandler;
 import static org.springframework.http.HttpStatus.*;
 
 import java.nio.file.AccessDeniedException;
+import java.util.stream.Collectors;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.ConstraintViolationException;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -24,6 +28,24 @@ public class GlobalExceptionHandler {
             ServiceException exception, HttpServletRequest request, HttpServletResponse response) {
         RsData<Void> rsData = exception.getRsData();
         return ResponseEntity.status(rsData.statusCode()).body(rsData);
+    }
+
+    // 유효성 검증 실패 (400) - @Valid 실패 시 (request body)
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<RsData<Void>> handle(MethodArgumentNotValidException exception) {
+        String message = exception.getBindingResult().getFieldErrors().stream()
+                .map(FieldError::getDefaultMessage)
+                .collect(Collectors.joining(", "));
+        return ResponseEntity.status(BAD_REQUEST).body(new RsData<>("400-2", message));
+    }
+
+    // 유효성 검증 실패 (400) - @Validated 실패 시 (request param, path variable)
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<RsData<Void>> handle(ConstraintViolationException exception) {
+        String message = exception.getConstraintViolations().stream()
+                .map(v -> v.getMessage())
+                .collect(Collectors.joining(", "));
+        return ResponseEntity.status(BAD_REQUEST).body(new RsData<>("400-2", message));
     }
 
     // 잘못된 인자 예외 (400)

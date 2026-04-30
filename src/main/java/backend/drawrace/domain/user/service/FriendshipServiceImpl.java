@@ -33,6 +33,10 @@ public class FriendshipServiceImpl implements FriendshipService {
         User requester = userService.findById(requesterId);
         User receiver = userService.findById(receiverId);
 
+        if (requester.isGuest() || receiver.isGuest()) {
+            throw new ServiceException("403-3", "게스트는 친구 기능을 사용할 수 없습니다.");
+        }
+
         friendshipRepository.findByUsers(requester, receiver).ifPresent(f -> {
             throw new ServiceException("409-1", "이미 처리 중이거나 완료된 친구 요청이 있습니다.");
         });

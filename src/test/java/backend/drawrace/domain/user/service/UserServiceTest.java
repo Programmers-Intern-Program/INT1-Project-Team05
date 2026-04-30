@@ -10,6 +10,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import backend.drawrace.domain.user.dto.CreateUserRequest;
+import backend.drawrace.domain.user.dto.GuestLoginRequest;
 import backend.drawrace.domain.user.dto.UpdateUserRequest;
 import backend.drawrace.domain.user.dto.UserInfoResponse;
 import backend.drawrace.domain.user.dto.UserSearchResponse;
@@ -150,5 +151,18 @@ class UserServiceTest {
         UserInfoResponse response = userService.updateProfile(savedId, new UpdateUserRequest("테스터", null));
 
         assertThat(response.nickname()).isEqualTo("테스터");
+    }
+
+    // ===== 게스트 제한 =====
+
+    @Test
+    @DisplayName("게스트_프로필_수정_실패")
+    void updateProfile_fail_guest() {
+        authService.guestLogin(new GuestLoginRequest("게스트테스터"));
+        Long guestId = userService.searchByNickname("게스트테스터").id();
+
+        assertThatThrownBy(() -> userService.updateProfile(guestId, new UpdateUserRequest("새닉네임", null)))
+                .isInstanceOf(ServiceException.class)
+                .hasFieldOrPropertyWithValue("resultCode", "403-4");
     }
 }

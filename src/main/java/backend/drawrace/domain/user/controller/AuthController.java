@@ -1,9 +1,5 @@
 package backend.drawrace.domain.user.controller;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -15,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import backend.drawrace.domain.user.dto.CreateUserRequest;
+import backend.drawrace.domain.user.dto.GuestLoginRequest;
 import backend.drawrace.domain.user.dto.LoginRequest;
 import backend.drawrace.domain.user.dto.LoginResponse;
 import backend.drawrace.domain.user.dto.TokenRequest;
@@ -23,6 +20,10 @@ import backend.drawrace.domain.user.service.AuthService;
 import backend.drawrace.global.rsdata.RsData;
 import backend.drawrace.global.security.SecurityUser;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 @Tag(name = "Auth API", description = "회원가입, 로그인 및 토큰 관리")
@@ -35,8 +36,8 @@ public class AuthController {
 
     @Operation(summary = "회원가입", description = "이메일, 비밀번호, 닉네임으로 가입합니다.")
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "가입 성공"),
-            @ApiResponse(responseCode = "409", description = "이미 존재하는 이메일(409-1) 또는 닉네임(409-2)")
+        @ApiResponse(responseCode = "201", description = "가입 성공"),
+        @ApiResponse(responseCode = "409", description = "이미 존재하는 이메일(409-1) 또는 닉네임(409-2)")
     })
     @PostMapping("/signup")
     public RsData<Long> signup(@RequestBody @Valid CreateUserRequest request) {
@@ -63,6 +64,12 @@ public class AuthController {
     public RsData<Void> logout(@AuthenticationPrincipal SecurityUser user) {
         authService.logout(user.getUserId());
         return new RsData<>("200-3", "로그아웃되었습니다.");
+    }
+
+    @PostMapping("/guest")
+    public RsData<LoginResponse> guestLogin(@RequestBody @Valid GuestLoginRequest request) {
+        LoginResponse token = authService.guestLogin(request);
+        return new RsData<>("201-2", "게스트 로그인에 성공했습니다.", token);
     }
 
     @Operation(summary = "비밀번호 변경", description = "현재 비밀번호 확인 후 새 비밀번호로 교체합니다.")

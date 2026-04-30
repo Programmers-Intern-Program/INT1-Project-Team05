@@ -32,6 +32,7 @@ public class CustomAuthenticationFilter extends OncePerRequestFilter {
         return uri.equals("/api/auth/login")
                 || uri.equals("/api/auth/signup")
                 || uri.equals("/api/auth/reissue")
+                || uri.equals("/api/auth/guest")
                 || uri.startsWith("/v3/api-docs")
                 || uri.startsWith("/swagger-ui")
                 || uri.startsWith("/h2-console");

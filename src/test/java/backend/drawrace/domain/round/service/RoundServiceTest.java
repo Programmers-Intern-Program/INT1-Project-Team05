@@ -24,6 +24,7 @@ import backend.drawrace.domain.room.repository.ParticipantRepository;
 import backend.drawrace.domain.room.repository.RoomRepository;
 import backend.drawrace.domain.round.dto.AiInferenceResponse;
 import backend.drawrace.domain.round.dto.CurrentRoundResponse;
+import backend.drawrace.domain.round.dto.PlayerSubmittedEvent;
 import backend.drawrace.domain.round.dto.RoundStartResponse;
 import backend.drawrace.domain.round.dto.SubmitDrawingRequest;
 import backend.drawrace.domain.round.dto.SubmitDrawingResponse;
@@ -165,6 +166,42 @@ class RoundServiceTest {
         assertThat(participant.getRoundWinCount()).isEqualTo(0);
 
         then(roundSubmissionRepository).should().save(any(RoundSubmission.class));
+    }
+
+    @Test
+    @DisplayName("그림 제출 시 제출 상태 이벤트를 웹소켓으로 전송한다")
+    void submitDrawing_broadcastPlayerSubmittedEvent() throws Exception {
+        Long roomId = 1L;
+        Long roundId = 10L;
+        Long participantId = 100L;
+
+        Room room = createRoom(roomId, true, 1L);
+        Round round = createInProgressRound(roundId, room, 1, "사과");
+        Participant participant = createParticipant(participantId, room, 0);
+
+        SubmitDrawingRequest request = createSubmitDrawingRequest(participantId, "dummy-image");
+
+        given(roundRepository.findById(roundId)).willReturn(Optional.of(round));
+        given(participantRepository.findByIdAndRoomId(participantId, roomId)).willReturn(Optional.of(participant));
+        given(roundParticipantRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(true);
+        given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, participantId))
+                .willReturn(false);
+        given(aiInferenceService.infer("dummy-image", "사과")).willReturn(new AiInferenceResponse("사과", 0.88));
+        given(roundSubmissionRepository.countByRoundId(roundId)).willReturn(1L);
+        given(roundParticipantRepository.countByRoundId(roundId)).willReturn(2L);
+
+        roundService.submitDrawing(roundId, 1L, request);
+
+        then(messagingTemplate)
+                .should()
+                .convertAndSend(
+                        eq("/sub/rooms/" + roomId),
+                        argThat((PlayerSubmittedEvent event) -> event.getType().equals("PLAYER_SUBMITTED")
+                                && event.getRoundId().equals(roundId)
+                                && event.getParticipantId().equals(participantId)
+                                && event.getSubmittedCount() == 1
+                                && event.getTotalParticipantCount() == 2));
     }
 
     @Test
@@ -640,6 +677,10 @@ class RoundServiceTest {
         given(roundRepository.findByRoomIdAndIsActiveTrue(roomId)).willReturn(Optional.of(round));
         given(roundParticipantRepository.findByRoundId(roundId))
                 .willReturn(List.of(roundParticipant1, roundParticipant2));
+        given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, participant1.getId()))
+                .willReturn(true);
+        given(roundSubmissionRepository.existsByRoundIdAndParticipantId(roundId, participant2.getId()))
+                .willReturn(false);
 
         CurrentRoundResponse response = roundService.getCurrentRound(roomId, 1L);
 
@@ -650,6 +691,8 @@ class RoundServiceTest {
         assertThat(response.getStatus()).isEqualTo(RoundStatus.IN_PROGRESS);
         assertThat(response.isTiebreaker()).isFalse();
         assertThat(response.getParticipants()).hasSize(2);
+        assertThat(response.getParticipants().get(0).isSubmitted()).isTrue();
+        assertThat(response.getParticipants().get(1).isSubmitted()).isFalse();
     }
 
     @Test
