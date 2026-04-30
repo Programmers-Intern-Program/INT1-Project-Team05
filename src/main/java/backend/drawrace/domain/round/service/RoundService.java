@@ -15,6 +15,7 @@ import backend.drawrace.domain.room.repository.ParticipantRepository;
 import backend.drawrace.domain.room.repository.RoomRepository;
 import backend.drawrace.domain.round.dto.AiInferenceResponse;
 import backend.drawrace.domain.round.dto.CurrentRoundResponse;
+import backend.drawrace.domain.round.dto.PlayerSubmittedEvent;
 import backend.drawrace.domain.round.dto.RoundParticipantResponse;
 import backend.drawrace.domain.round.dto.RoundStartResponse;
 import backend.drawrace.domain.round.dto.SubmitDrawingRequest;
@@ -137,6 +138,8 @@ public class RoundService {
         long submittedCount = roundSubmissionRepository.countByRoundId(round.getId());
         long totalParticipantCount = roundParticipantRepository.countByRoundId(round.getId());
 
+        sendPlayerSubmittedEvent(round, participant, submittedCount, totalParticipantCount);
+
         // 아직 전원 제출 전이면 대기 응답 반환
         if (submittedCount < totalParticipantCount) {
             return SubmitDrawingResponse.builder()
@@ -177,7 +180,14 @@ public class RoundService {
 
         List<RoundParticipantResponse> participants =
                 roundParticipantRepository.findByRoundId(currentRound.getId()).stream()
-                        .map(roundParticipant -> RoundParticipantResponse.from(roundParticipant.getParticipant()))
+                        .map(roundParticipant -> {
+                            Participant participant = roundParticipant.getParticipant();
+
+                            boolean submitted = roundSubmissionRepository.existsByRoundIdAndParticipantId(
+                                    currentRound.getId(), participant.getId());
+
+                            return RoundParticipantResponse.from(participant, submitted);
+                        })
                         .toList();
 
         return CurrentRoundResponse.of(currentRound, participants);
@@ -441,6 +451,19 @@ public class RoundService {
                 .findFirst()
                 .ifPresent(ai -> service.trigger(
                         round.getId(), ai.getId(), ai.getUserId().getId(), round.getKeyword()));
+    }
+
+    private void sendPlayerSubmittedEvent(
+            Round round, Participant participant, long submittedCount, long totalParticipantCount) {
+
+        PlayerSubmittedEvent event = PlayerSubmittedEvent.builder()
+                .roundId(round.getId())
+                .participantId(participant.getId())
+                .submittedCount((int) submittedCount)
+                .totalParticipantCount((int) totalParticipantCount)
+                .build();
+
+        messagingTemplate.convertAndSend("/sub/rooms/" + round.getRoom().getId(), event);
     }
 
     private void sendFinalWinnerNotice(Long roomId, String nickname) {
