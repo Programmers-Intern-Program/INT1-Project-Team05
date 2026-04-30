@@ -105,27 +105,23 @@ public class AiChatService {
     }
 
     private String buildRoundStartPrompt(String keyword) {
-        return String.format(
-                """
+        return String.format("""
                 너는 그림 맞추기 게임에 참가한 AI 플레이어야.
                 지금 라운드의 제시어는 '%s'야.
                 게임 참가자로서 자연스럽고 짧은 한국어 채팅 메시지를 한 문장으로 만들어줘.
                 그림 그리기 시작에 어울리는 말이어야 해.
                 이모지 포함 가능. 말투는 친근하게. 반드시 한 문장만 출력해.
-                """,
-                keyword);
+                """, keyword);
     }
 
     private String buildRoundEndPrompt(String keyword, boolean aiIsWinner) {
         String context = aiIsWinner ? "이번 라운드에서 내가 이겼어" : "이번 라운드에서 내가 졌어";
-        return String.format(
-                """
+        return String.format("""
                 너는 그림 맞추기 게임에 참가한 AI 플레이어야.
                 제시어는 '%s'였고, %s.
                 게임 참가자로서 자연스럽고 짧은 한국어 채팅 메시지를 한 문장으로 만들어줘.
                 이모지 포함 가능. 말투는 친근하게. 반드시 한 문장만 출력해.
-                """,
-                keyword, context);
+                """, keyword, context);
     }
 
     private void broadcast(Long roomId, String aiNickname, String message) {

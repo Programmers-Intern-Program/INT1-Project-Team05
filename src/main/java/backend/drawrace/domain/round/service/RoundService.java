@@ -478,7 +478,8 @@ public class RoundService {
         participants.stream()
                 .filter(p -> p.getUserId().isAi())
                 .findFirst()
-                .ifPresent(ai -> service.triggerOnRoundStart(roomId, keyword, ai.getUserId().getNickname()));
+                .ifPresent(ai -> service.triggerOnRoundStart(
+                        roomId, keyword, ai.getUserId().getNickname()));
     }
 
     private void triggerAiChatOnRoundEnd(
