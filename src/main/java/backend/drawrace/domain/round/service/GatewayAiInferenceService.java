@@ -53,6 +53,13 @@ public class GatewayAiInferenceService implements AiInferenceService {
      * 실제 Gateway 요청과 응답 파싱을 수행한다.
      */
     private AiInferenceResponse requestInference(String imageData, String keyword) {
+        log.info(
+                "AI 요청 model={}, keyword={}, imageData length={}, prefix={}",
+                aiProperties.model(),
+                keyword,
+                imageData == null ? null : imageData.length(),
+                imageData == null ? null : imageData.substring(0, Math.min(imageData.length(), 80)));
+
         RestClient restClient = RestClient.builder()
                 .baseUrl(aiProperties.baseUrl())
                 .defaultHeader("Authorization", "Bearer " + aiProperties.apiKey())
@@ -78,6 +85,12 @@ public class GatewayAiInferenceService implements AiInferenceService {
         String content = sanitizeContent(extractContent(response));
         GatewayInferenceResult result = parseInferenceResult(content);
         validateInferenceResult(result);
+
+        log.info(
+                "AI 응답 content={}, aiAnswer={}, score={}",
+                content,
+                result.getAiAnswer(),
+                result.getScore());
 
         return new AiInferenceResponse(result.getAiAnswer(), result.getScore());
     }
