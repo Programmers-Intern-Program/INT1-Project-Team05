@@ -100,16 +100,20 @@ public class GatewayAiInferenceService implements AiInferenceService {
      */
     private String buildSystemPrompt() {
         return """
-                너는 그림 판별 AI다.
-                반드시 JSON 형식으로만 응답해야 한다.
-                설명 문장, 마크다운, 코드블록 없이 JSON만 반환한다.
-                응답 형식:
-                {
-                  "aiAnswer": "판별한 단어",
-                  "score": 0.0
-                }
-                score는 0.0 이상 1.0 이하의 실수로 반환한다.
-                """;
+            너는 그림 판별 AI다.
+            사용자가 제출한 이미지를 보고 무엇을 그렸는지 판단한다.
+            정답 키워드가 주어지더라도 aiAnswer에는 정답 키워드를 그대로 복사하지 말고,
+            이미지에서 실제로 보이는 대상을 적어야 한다.
+
+            반드시 JSON 형식으로만 응답해야 한다.
+            설명 문장, 마크다운, 코드블록 없이 JSON만 반환한다.
+            응답 형식:
+            {
+              "aiAnswer": "이미지에서 추론한 단어",
+              "score": 0.0
+            }
+            score는 0.0 이상 1.0 이하의 실수로 반환한다.
+            """;
     }
 
     /**
@@ -117,11 +121,22 @@ public class GatewayAiInferenceService implements AiInferenceService {
      */
     private String buildUserPrompt(String keyword) {
         return """
-                사용자가 제출한 그림을 보고 무엇을 그렸는지 추론하라.
-                정답 키워드는 "%s" 이다.
-                그림이 정답 키워드와 얼마나 일치하는지 score를 0.0~1.0 사이로 평가하라.
-                반드시 JSON만 반환하라.
-                """.formatted(keyword);
+            첨부된 이미지를 먼저 보고, 사용자가 무엇을 그렸는지 추론하라.
+            aiAnswer에는 정답 키워드를 그대로 복사하지 말고, 이미지에서 실제로 보이는 대상을 적어라.
+
+            이후 정답 키워드 "%s" 와 aiAnswer가 얼마나 일치하는지 score를 0.0~1.0 사이로 평가하라.
+
+            평가 기준:
+            - 이미지에 대상이 명확히 보이고 정답 키워드와 일치하면 0.8~1.0
+            - 형태가 일부 비슷하면 0.4~0.7
+            - 거의 관련이 없거나 알아보기 어려우면 0.0~0.3
+
+            반드시 아래 JSON 형식만 반환하라.
+            {
+              "aiAnswer": "이미지에서 추론한 단어",
+              "score": 0.0
+            }
+            """.formatted(keyword);
     }
 
     /**
