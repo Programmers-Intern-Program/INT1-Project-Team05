@@ -1,6 +1,7 @@
 package backend.drawrace.domain.user.service;
 
 import backend.drawrace.domain.user.dto.CreateUserRequest;
+import backend.drawrace.domain.user.dto.GuestLoginRequest;
 import backend.drawrace.domain.user.dto.LoginRequest;
 import backend.drawrace.domain.user.dto.LoginResponse;
 import backend.drawrace.domain.user.dto.TokenRequest;
@@ -41,4 +42,11 @@ public interface AuthService {
      * @param request 현재 비밀번호 및 새 비밀번호
      */
     void updatePassword(Long userId, UpdatePasswordRequest request);
+
+    /**
+     * 게스트 로그인 (닉네임만으로 임시 계정 생성 후 단기 토큰 발급)
+     * @param request 닉네임
+     * @return 단기 AccessToken (RefreshToken 없음)
+     */
+    LoginResponse guestLogin(GuestLoginRequest request);
 }

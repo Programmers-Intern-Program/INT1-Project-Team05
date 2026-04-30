@@ -1,10 +1,13 @@
 package backend.drawrace.domain.user.service;
 
+import java.util.UUID;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import backend.drawrace.domain.user.dto.CreateUserRequest;
+import backend.drawrace.domain.user.dto.GuestLoginRequest;
 import backend.drawrace.domain.user.dto.LoginRequest;
 import backend.drawrace.domain.user.dto.LoginResponse;
 import backend.drawrace.domain.user.dto.TokenRequest;
@@ -105,8 +108,42 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
+    public LoginResponse guestLogin(GuestLoginRequest request) {
+        String nickname = resolveGuestNickname(request.nickname());
+
+        User guest = User.builder()
+                .email("guest_" + UUID.randomUUID() + "@drawrace.com")
+                .password(passwordEncoder.encode(UUID.randomUUID().toString()))
+                .nickname(nickname)
+                .isAi(false)
+                .isGuest(true)
+                .build();
+
+        userRepository.save(guest);
+
+        String accessToken = jwtTokenProvider.createAccessToken(guest.getId(), guest.getEmail());
+        return new LoginResponse(accessToken, "");
+    }
+
+    private String resolveGuestNickname(String base) {
+        if (!userRepository.existsByNickname(base)) {
+            return base;
+        }
+        int suffix = 1;
+        while (userRepository.existsByNickname(base + "_" + suffix)) {
+            suffix++;
+        }
+        return base + "_" + suffix;
+    }
+
+    @Override
+    @Transactional
     public void updatePassword(Long userId, UpdatePasswordRequest request) {
         User user = userRepository.findById(userId).orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 유저입니다."));
+
+        if (user.isGuest()) {
+            throw new ServiceException("403-2", "게스트는 비밀번호를 변경할 수 없습니다.");
+        }
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
             throw new ServiceException("401-5", "현재 비밀번호가 올바르지 않습니다.");

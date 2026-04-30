@@ -37,16 +37,16 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(
-                        auth -> auth.requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/reissue")
-                                .permitAll()
-                                // 웹소켓 연결 시작 주소는 허용 (인증은 인터셉터에서 수행)
-                                .requestMatchers("/ws-draw/**")
-                                .permitAll()
-                                .requestMatchers("/api/ai/test", "/ai-test.html")
-                                .permitAll()
-                                .anyRequest()
-                                .authenticated())
+                .authorizeHttpRequests(auth -> auth.requestMatchers(
+                                "/api/auth/signup", "/api/auth/login", "/api/auth/reissue", "/api/auth/guest")
+                        .permitAll()
+                        // 웹소켓 연결 시작 주소는 허용 (인증은 인터셉터에서 수행)
+                        .requestMatchers("/ws-draw/**")
+                        .permitAll()
+                        .requestMatchers("/api/ai/test", "/ai-test.html")
+                        .permitAll()
+                        .anyRequest()
+                        .authenticated())
                 .addFilterBefore(customAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
