@@ -8,6 +8,7 @@ import backend.drawrace.domain.user.dto.CreateUserRequest;
 import backend.drawrace.domain.user.dto.LoginRequest;
 import backend.drawrace.domain.user.dto.LoginResponse;
 import backend.drawrace.domain.user.dto.TokenRequest;
+import backend.drawrace.domain.user.dto.UpdatePasswordRequest;
 import backend.drawrace.domain.user.entity.RefreshToken;
 import backend.drawrace.domain.user.entity.User;
 import backend.drawrace.domain.user.repository.RefreshTokenRepository;
@@ -100,5 +101,21 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public void logout(Long userId) {
         refreshTokenRepository.deleteById(userId);
+    }
+
+    @Override
+    @Transactional
+    public void updatePassword(Long userId, UpdatePasswordRequest request) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 유저입니다."));
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new ServiceException("401-5", "현재 비밀번호가 올바르지 않습니다.");
+        }
+
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new ServiceException("400-1", "새 비밀번호가 현재 비밀번호와 동일합니다.");
+        }
+
+        user.changePassword(passwordEncoder.encode(request.getNewPassword()));
     }
 }
