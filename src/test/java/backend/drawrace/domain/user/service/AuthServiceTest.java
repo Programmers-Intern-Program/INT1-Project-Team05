@@ -17,6 +17,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.transaction.annotation.Transactional;
 
 import backend.drawrace.domain.user.dto.CreateUserRequest;
+import backend.drawrace.domain.user.dto.GuestLoginRequest;
 import backend.drawrace.domain.user.dto.LoginRequest;
 import backend.drawrace.domain.user.dto.LoginResponse;
 import backend.drawrace.domain.user.dto.TokenRequest;
@@ -194,6 +195,36 @@ class AuthServiceTest {
         authService.logout(userId);
 
         assertThat(refreshTokenRepository.findById(userId)).isEmpty();
+    }
+
+    // ===== 게스트 로그인 =====
+
+    @Test
+    @DisplayName("게스트_로그인_성공")
+    void guestLogin_success() {
+        LoginResponse response = authService.guestLogin(new GuestLoginRequest("게스트닉네임"));
+
+        assertThat(response.accessToken()).isNotBlank();
+        assertThat(response.refreshToken()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("게스트_로그인_성공_닉네임_중복_시_suffix_부여")
+    void guestLogin_success_duplicate_nickname_gets_suffix() {
+        authService.guestLogin(new GuestLoginRequest("홍길동"));
+        LoginResponse response = authService.guestLogin(new GuestLoginRequest("홍길동"));
+
+        assertThat(response.accessToken()).isNotBlank();
+    }
+
+    @Test
+    @DisplayName("게스트_로그인_성공_회원_닉네임과_중복_시_suffix_부여")
+    void guestLogin_success_member_nickname_conflict_gets_suffix() {
+        createTestUser(); // 닉네임: 테스터
+
+        LoginResponse response = authService.guestLogin(new GuestLoginRequest("테스터"));
+
+        assertThat(response.accessToken()).isNotBlank();
     }
 
     // ===== 비밀번호 변경 =====
