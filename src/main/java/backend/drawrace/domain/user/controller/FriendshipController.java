@@ -2,10 +2,6 @@ package backend.drawrace.domain.user.controller;
 
 import java.util.List;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,6 +16,10 @@ import backend.drawrace.domain.user.service.FriendshipService;
 import backend.drawrace.global.rsdata.RsData;
 import backend.drawrace.global.security.SecurityUser;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 @Tag(name = "Friendship API", description = "친구 요청 및 목록 관리")
@@ -32,8 +32,8 @@ public class FriendshipController {
 
     @Operation(summary = "친구 요청", description = "상대 유저 ID로 요청을 보냅니다. 본인에게는 불가합니다.")
     @ApiResponses({
-            @ApiResponse(responseCode = "400", description = "자신에게 요청(400-1)"),
-            @ApiResponse(responseCode = "409", description = "이미 처리 중인 요청 존재(409-1)")
+        @ApiResponse(responseCode = "400", description = "자신에게 요청(400-1)"),
+        @ApiResponse(responseCode = "409", description = "이미 처리 중인 요청 존재(409-1)")
     })
     @PostMapping("/request/{receiverId}")
     public RsData<Void> sendFriendRequest(

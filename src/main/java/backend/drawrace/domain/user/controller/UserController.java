@@ -1,9 +1,5 @@
 package backend.drawrace.domain.user.controller;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotBlank;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -24,6 +20,10 @@ import backend.drawrace.domain.user.service.UserService;
 import backend.drawrace.global.rsdata.RsData;
 import backend.drawrace.global.security.SecurityUser;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 @Tag(name = "User API", description = "유저 정보 조회, 검색 및 프로필 관리")
@@ -58,8 +58,8 @@ public class UserController {
 
     @Operation(summary = "프로필 수정", description = "닉네임이나 프로필 이미지를 변경합니다. 닉네임 중복 시 409 에러가 발생합니다.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "수정 성공"),
-            @ApiResponse(responseCode = "409", description = "이미 사용 중인 닉네임(409-1)")
+        @ApiResponse(responseCode = "200", description = "수정 성공"),
+        @ApiResponse(responseCode = "409", description = "이미 사용 중인 닉네임(409-1)")
     })
     @PatchMapping("/me")
     public RsData<UserInfoResponse> updateMyProfile(

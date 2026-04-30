@@ -1,7 +1,5 @@
 package backend.drawrace.domain.round.controller;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,6 +9,8 @@ import backend.drawrace.domain.round.service.RoundService;
 import backend.drawrace.global.rsdata.RsData;
 import backend.drawrace.global.security.SecurityUser;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 @Tag(name = "Round & Game API", description = "게임 시작 및 그림 제출")

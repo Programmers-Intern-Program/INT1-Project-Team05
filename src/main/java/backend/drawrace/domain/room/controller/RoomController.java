@@ -2,10 +2,6 @@ package backend.drawrace.domain.room.controller;
 
 import java.util.List;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -22,6 +18,10 @@ import backend.drawrace.domain.room.service.RoomService;
 import backend.drawrace.global.rsdata.RsData;
 import backend.drawrace.global.security.SecurityUser;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 @Tag(name = "Room API", description = "방 생성, 목록 조회, 입장/퇴장 및 AI 관리")
@@ -60,9 +60,9 @@ public class RoomController {
 
     @Operation(summary = "방 입장", description = "비밀번호 확인 후 방에 입장합니다. 동시 접속자가 많으면 409 에러가 발생합니다.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "입장 성공"),
-            @ApiResponse(responseCode = "400", description = "비밀번호 불일치[cite: 22] 또는 정원 초과"),
-            @ApiResponse(responseCode = "409", description = "접속자 폭주로 인한 입장 실패 (재시도 권장)")
+        @ApiResponse(responseCode = "200", description = "입장 성공"),
+        @ApiResponse(responseCode = "400", description = "비밀번호 불일치[cite: 22] 또는 정원 초과"),
+        @ApiResponse(responseCode = "409", description = "접속자 폭주로 인한 입장 실패 (재시도 권장)")
     })
     // 방 입장
     @PostMapping("/{roomId}/join")
