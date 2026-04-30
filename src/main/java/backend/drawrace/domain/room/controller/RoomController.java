@@ -2,6 +2,10 @@ package backend.drawrace.domain.room.controller;
 
 import java.util.List;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -20,6 +24,7 @@ import backend.drawrace.global.security.SecurityUser;
 
 import lombok.RequiredArgsConstructor;
 
+@Tag(name = "Room API", description = "방 생성, 목록 조회, 입장/퇴장 및 AI 관리")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/rooms")
@@ -29,6 +34,7 @@ public class RoomController {
     private final SimpMessagingTemplate messagingTemplate;
 
     // 방 생성
+    @Operation(summary = "방 생성")
     @PostMapping
     public RsData<RoomInfoRes> createRoom(
             @Valid @RequestBody CreateRoomReq req, @AuthenticationPrincipal SecurityUser securityUser) {
@@ -37,6 +43,7 @@ public class RoomController {
     }
 
     // 방 목록 조회
+    @Operation(summary = "방 목록 조회")
     @GetMapping
     public RsData<List<GetRoomListRes>> getRoomList() {
         List<GetRoomListRes> rooms = roomService.getRoomList();
@@ -44,12 +51,19 @@ public class RoomController {
     }
 
     // 방 상세 조회
+    @Operation(summary = "방 상세 조회")
     @GetMapping("/{roomId}")
     public RsData<RoomInfoRes> getRoomDetail(@PathVariable Long roomId) {
         RoomInfoRes detail = roomService.getRoomDetail(roomId);
         return new RsData<>("200-2", "방 상세 정보를 성공적으로 조회했습니다.", detail);
     }
 
+    @Operation(summary = "방 입장", description = "비밀번호 확인 후 방에 입장합니다. 동시 접속자가 많으면 409 에러가 발생합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "입장 성공"),
+            @ApiResponse(responseCode = "400", description = "비밀번호 불일치[cite: 22] 또는 정원 초과"),
+            @ApiResponse(responseCode = "409", description = "접속자 폭주로 인한 입장 실패 (재시도 권장)")
+    })
     // 방 입장
     @PostMapping("/{roomId}/join")
     public RsData<RoomUpdateResponse> joinRoom(
@@ -70,6 +84,7 @@ public class RoomController {
       }
     */
     // 방 퇴장
+    @Operation(summary = "방 퇴장")
     @DeleteMapping("/{roomId}/leave")
     public RsData<Void> leaveRoom(@PathVariable Long roomId, @AuthenticationPrincipal SecurityUser securityUser) {
         RoomUpdateResponse response = roomService.leaveRoom(securityUser.getUserId());
@@ -84,12 +99,14 @@ public class RoomController {
     }
 
     @GetMapping("/{roomId}/ranking")
+    @Operation(summary = "최종 랭킹 조회")
     public RsData<List<RankingRes>> getFinalRanking(@PathVariable Long roomId) {
         List<RankingRes> ranking = roomService.getFinalRanking(roomId);
 
         return new RsData<>("200-1", "랭킹 조회 성공", ranking);
     }
 
+    @Operation(summary = "AI 참가자 추가")
     @PostMapping("/{roomId}/ai-participants")
     public RsData<RoomInfoRes> addAiParticipant(
             @PathVariable Long roomId, @AuthenticationPrincipal SecurityUser securityUser) {
@@ -98,6 +115,7 @@ public class RoomController {
         return new RsData<>("200-6", "AI 참가자를 추가했습니다.", res);
     }
 
+    @Operation(summary = "AI 참가자 제거")
     @DeleteMapping("/{roomId}/ai-participants")
     public RsData<RoomInfoRes> removeAiParticipant(
             @PathVariable Long roomId, @AuthenticationPrincipal SecurityUser securityUser) {

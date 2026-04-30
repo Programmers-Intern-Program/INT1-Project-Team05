@@ -1,5 +1,9 @@
 package backend.drawrace.domain.user.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotBlank;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,6 +26,7 @@ import backend.drawrace.global.security.SecurityUser;
 
 import lombok.RequiredArgsConstructor;
 
+@Tag(name = "User API", description = "유저 정보 조회, 검색 및 프로필 관리")
 @Validated
 @RestController
 @RequiredArgsConstructor
@@ -30,24 +35,32 @@ public class UserController {
 
     private final UserService userService;
 
+    @Operation(summary = "본인 정보 조회", description = "현재 로그인한 유저의 프로필 및 승률 통계를 조회합니다.")
     @GetMapping("/me")
     public RsData<UserInfoResponse> getMyInfo(@AuthenticationPrincipal SecurityUser securityUser) {
         UserInfoResponse response = userService.getUser(securityUser.getUserId());
         return new RsData<>("200-1", "본인 정보를 성공적으로 조회했습니다.", response);
     }
 
+    @Operation(summary = "특정 유저 정보 조회", description = "유저 ID를 통해 프로필 정보를 조회합니다.")
     @GetMapping("/{userId}")
     public RsData<UserInfoResponse> findOne(@PathVariable Long userId) {
         UserInfoResponse response = userService.getUser(userId);
         return new RsData<>("200-2", "유저 정보를 성공적으로 조회했습니다.", response);
     }
 
+    @Operation(summary = "닉네임으로 유저 검색", description = "닉네임이 정확히 일치하는 유저를 검색합니다.")
     @GetMapping("/search")
     public RsData<UserSearchResponse> searchByNickname(@RequestParam @NotBlank String nickname) {
         UserSearchResponse response = userService.searchByNickname(nickname);
         return new RsData<>("200-5", "유저를 성공적으로 조회했습니다.", response);
     }
 
+    @Operation(summary = "프로필 수정", description = "닉네임이나 프로필 이미지를 변경합니다. 닉네임 중복 시 409 에러가 발생합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "수정 성공"),
+            @ApiResponse(responseCode = "409", description = "이미 사용 중인 닉네임(409-1)")
+    })
     @PatchMapping("/me")
     public RsData<UserInfoResponse> updateMyProfile(
             @AuthenticationPrincipal SecurityUser securityUser, @RequestBody @Validated UpdateUserRequest request) {
@@ -55,6 +68,7 @@ public class UserController {
         return new RsData<>("200-4", "프로필이 성공적으로 수정되었습니다.", response);
     }
 
+    @Operation(summary = "회원 탈퇴", description = "계정을 삭제하고 세션(리프레시 토큰)을 만료시킵니다.")
     @DeleteMapping("/me")
     public RsData<Void> deleteMyAccount(@AuthenticationPrincipal SecurityUser securityUser) {
         userService.deleteUser(securityUser.getUserId());
